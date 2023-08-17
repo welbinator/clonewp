@@ -44,16 +44,30 @@ function wp_github_clone_pull() {
    
     check_ajax_referer('wp-github-clone-nonce', 'nonce');
 
-    $repo_name = sanitize_text_field($_POST['repo']);
+    $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
+
+    if (empty($repo_name)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository name not provided."
+        ));
+        return;
+    }
+
     $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    // Fetch the PAT associated with this repo
+    $token = get_option('wp_github_clone_token_' . $repo_name);
+
+    // Add the token to the local git config for this repo
+    shell_exec("git -C {$repo_path} config credential.helper 'store --file=.git/credentials'");
+    shell_exec("git -C {$repo_path} config credential.username {$token}");
 
     putenv("COMPOSER_HOME=" . sys_get_temp_dir() . "/composer");
 
     // Capture the output and errors of the git pull command
     $output = shell_exec("git -C {$repo_path} pull 2>&1");
 
-    // If the command succeeds, usually the output will have the phrase "Already up to date" 
-    // or information about the files changed. 
     // Adjust as necessary based on your experience with typical git pull outputs.
     if (strpos($output, 'Already up to date') !== false || strpos($output, 'Fast-forward') !== false) {
         set_transient('wp_github_clone_pull_success', true, 5); // This sets a transient for 5 seconds
@@ -85,18 +99,28 @@ function wp_github_clone_admin_notices() {
 }
 add_action('admin_notices', 'wp_github_clone_admin_notices');
 
-
 // AJAX handler for the Delete action
 function wp_github_clone_delete() {
     check_ajax_referer('wp-github-clone-nonce', 'nonce');
 
+    if (!isset($_POST['repo']) || empty($_POST['repo'])) {
+        $errorDetails = isset($_POST['repo']) ? "Repo name was empty." : "Repo index not set in POST request.";
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository name not provided.",
+            'details' => $errorDetails
+        ));
+        return;
+    }
+    
     $repo_name = sanitize_text_field($_POST['repo']);
+    
+
     $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
 
     if (is_dir($repo_path)) {
         // Use a recursive directory delete function to delete the repo
         rrmdir($repo_path);
-
 
         wp_send_json(array(
             'success' => true,
@@ -110,5 +134,4 @@ function wp_github_clone_delete() {
     }
 }
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
-
 
