@@ -31,6 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['github-url'])) {
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
     
+    <h2 class="nav-tab-wrapper">
+        <a href="#tab-clone" class="nav-tab nav-tab-active">Clone</a>
+        <a href="#tab-repos" class="nav-tab">Repos</a>
+    </h2>
+
+    <div class="tab-content" id="tab-clone">
+
+    <h3>Clone a new Theme from GitHub</h3>
     <!-- Display any messages -->
     <?php if (!empty($error_message)): ?>
         <div class="notice notice-error">
@@ -51,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['github-url'])) {
         <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
         <input type="submit" value="Clone Repository" class="button-primary">
     </form>
+    </div>
+
+    <div class="tab-content" id="tab-repos" style="display:none;">
 
     <!-- Display list of cloned repositories with Pull and Delete buttons -->
     <?php if (!empty($cloned_repositories)): ?>

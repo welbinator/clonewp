@@ -37,7 +37,7 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        var repoName = $(this).data('repo');
+        var repoName = $(this).data('repo-name');
 
         // Send AJAX request to WordPress to delete the repository
         $.ajax({
@@ -60,5 +60,14 @@ jQuery(document).ready(function($) {
                 alert('An unexpected error occurred.');
             }
         });
+    });
+    $('.nav-tab').click(function(e) {
+        e.preventDefault();
+        
+        $('.nav-tab').removeClass('nav-tab-active');
+        $(this).addClass('nav-tab-active');
+        
+        $('.tab-content').hide();
+        $($(this).attr('href')).show();
     });
 });

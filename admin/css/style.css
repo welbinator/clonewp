@@ -1,0 +1,24 @@
+.nav-tab {
+    display: inline-block;
+    padding: 10px 15px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    cursor: pointer;
+    background-color: #f1f1f1;
+    text-decoration: none;
+}
+
+.nav-tab-active {
+    background-color: #fff;
+    border-bottom: 1px solid #fff;
+}
+#tab-clone form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-width: 600px;
+}
+#tab-clone input[type="submit"] {
+    margin-top: 20px!important;
+}

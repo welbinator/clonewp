@@ -26,6 +26,7 @@ function run_wp_github_clone() {
 
 run_wp_github_clone();
 
+// enqueue scripts
 function wp_github_clone_enqueue_scripts($hook) {
     if ($hook != 'settings_page_wp-github-clone') {
         return;
@@ -38,6 +39,16 @@ function wp_github_clone_enqueue_scripts($hook) {
     ));
 }
 add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_scripts');
+
+// enqueue styles
+function wp_github_clone_enqueue_admin_styles($hook) {
+    if ($hook != 'settings_page_wp-github-clone') {
+        return;
+    }
+
+    wp_enqueue_style('wp-github-clone-admin-style', plugin_dir_url(__FILE__) . 'admin/css/style.css', array(), '1.0.0');
+}
+add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_admin_styles');
 
 // AJAX handler for the Pull action
 function wp_github_clone_pull() {
