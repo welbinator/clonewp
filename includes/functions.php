@@ -1,44 +1,41 @@
 <?php
 
-function clone_github_repo($repo_url) {
+function clone_github_repo($repo_url, $pat) {
     // Extract repo name from the URL
-    $repo_parts = explode('/', rtrim($repo_url, '/'));  // rtrim to remove trailing slashes, if any
+    $repo_parts = explode('/', rtrim($repo_url, '/')); 
     $repo_name = end($repo_parts);
-
-    // Prepare the directory path
     $theme_dir = WP_CONTENT_DIR . '/themes/' . $repo_name;
     
-    // Check if the directory already exists
     if (is_dir($theme_dir)) {
         return array('success' => false, 'message' => "The directory for repository {$repo_name} already exists.");
     }
 
-    // Concatenate the token with the repo_url
-    $token = get_option('wp_github_clone_token');
-    $authenticated_repo_url = str_replace('https://', 'https://' . $token . '@', $repo_url);
-    $concatenated_url = str_replace("https://", "https://{$token}@", $repo_url);
+    $authenticated_repo_url = str_replace('https://', 'https://' . $pat . '@', $repo_url);
+    $command = 'git clone ' . escapeshellarg($authenticated_repo_url) . ' ' . escapeshellarg($theme_dir) . ' 2>&1';
+    $output = shell_exec($command);
 
-    // Log the concatenated URL for debugging purposes
-    // uncomment out the next line if you would like to log the URL to the debug.log file for debugging purposes
-    // error_log("Constructed URL: " . $concatenated_url);
-
-    $command = 'git clone ' . escapeshellarg($concatenated_url) . ' ' . escapeshellarg($theme_dir) . ' 2>&1';
-    $output = shell_exec($command . ' 2>&1');
-    
     if(strpos($output, 'fatal:') !== false) {
         wp_github_clone_log($output);
         return array('success' => false, 'message' => 'Failed to clone repository.');
     }
+
+    // Save the PAT associated with the repo.
+    update_option('wp_github_clone_token_' . $repo_name, $pat);
     
     return array('success' => true, 'message' => 'Repository cloned successfully.');
 }
 
-
-
-
 function pull_repo_changes($local_path) {
-    $command = 'git -C ' . escapeshellarg($local_path) . ' pull';
-    $output = shell_exec($command . ' 2>&1');
+    $path_parts = explode('/', rtrim($local_path, '/'));
+    $repo_name = end($path_parts);
+    $pat = get_option('wp_github_clone_token_' . $repo_name);
+    
+    if (!$pat) {
+        return array('success' => false, 'message' => 'Personal Access Token not found.');
+    }
+
+    $command = 'git -C ' . escapeshellarg($local_path) . ' -c "user.password=' . escapeshellarg($pat) . '" pull 2>&1';
+    $output = shell_exec($command);
 
     if(strpos($output, 'fatal:') !== false) {
         wp_github_clone_log($output);
@@ -49,8 +46,14 @@ function pull_repo_changes($local_path) {
 }
 
 function delete_local_repo($local_path) {
+    $path_parts = explode('/', rtrim($local_path, '/'));
+    $repo_name = end($path_parts);
+
+    // Delete the PAT associated with the repo.
+    delete_option('wp_github_clone_token_' . $repo_name);
+
     $command = 'rm -rf ' . escapeshellarg($local_path);
-    $output = shell_exec($command . ' 2>&1');
+    $output = shell_exec($command);
 
     if(!empty($output)) {
         wp_github_clone_log($output);
@@ -77,19 +80,23 @@ function wp_github_clone_log($message) {
     }
 }
 
-
 function get_cloned_repositories() {
     $repos = [];
+    $stored_repos_with_pat = get_option('wp_github_clone_repos', []); // Retrieve saved repositories with PATs
+
     $dir = new DirectoryIterator(WP_CONTENT_DIR . '/themes');
     foreach ($dir as $fileinfo) {
         if ($fileinfo->isDir() && !$fileinfo->isDot()) {
             if (file_exists($fileinfo->getPathname() . '/.git')) {
-                $repos[] = $fileinfo->getFilename();
+                $repo_name = $fileinfo->getFilename();
+                $repos[$repo_name] = isset($stored_repos_with_pat[$repo_name]) ? $stored_repos_with_pat[$repo_name] : '';
             }
         }
     }
+
     return $repos;
 }
+
 
 function rrmdir($dir) {
     if (is_dir($dir)) {
