@@ -10,22 +10,6 @@ $success_message = '';
 // Retrieve the list of cloned repositories and their PATs.
 $cloned_repositories = get_cloned_repositories();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['github-url'])) {
-    $github_url = sanitize_text_field($_POST['github-url']);
-    $pat = sanitize_text_field($_POST['github-pat']); // Get the PAT from POST data
-    
-    if (!is_valid_github_url($github_url)) {
-        $error_message = 'Invalid GitHub URL provided.';
-    } else {
-        $result = clone_github_repo($github_url, $pat);  // Pass the PAT to the function
-        if ($result['success']) {
-            $success_message = $result['message'];
-        } else {
-            $error_message = $result['message'];
-        }
-    }
-}
-
 ?>
 
 <div class="wrap">
@@ -53,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['github-url'])) {
     <?php endif; ?>
 
     <form method="post">
+    <?php wp_nonce_field('wp_github_clone_nonce'); ?>
+
         <label for="github-url">GitHub Repository URL:</label>
         <input type="text" id="github-url" name="github-url">
         <label for="github-pat">GitHub Personal Access Token:</label>

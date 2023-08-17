@@ -35,7 +35,7 @@ function wp_github_clone_enqueue_scripts($hook) {
     wp_enqueue_script('wp-github-clone-script', plugin_dir_url(__FILE__) . 'admin/js/script.js', array('jquery'), '1.0.0', true);
     wp_localize_script('wp-github-clone-script', 'wpGithubClone', array(
         'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('wp-github-clone-nonce')
+        'nonce' => wp_create_nonce('wp_github_clone_nonce')
     ));
 }
 add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_scripts');
@@ -87,12 +87,14 @@ function wp_github_clone_pull() {
             'message' => "Successfully pulled changes for {$repo_name}",
             'details' => $output // This provides additional info about the pull.
         ));
+
     } else {
         wp_send_json(array(
             'success' => false,
             'message' => "Failed to pull changes for {$repo_name}",
             'details' => $output // This provides details on why the pull failed.
         ));
+
     }
 }
 
@@ -145,4 +147,38 @@ function wp_github_clone_delete() {
     }
 }
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
+
+// AJAX handler for the Clone action
+function wp_github_clone_ajax() {
+    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+
+    $github_url = isset($_POST['github-url']) ? sanitize_text_field($_POST['github-url']) : '';
+    $pat = isset($_POST['github-pat']) ? sanitize_text_field($_POST['github-pat']) : '';
+
+    if(empty($github_url) || empty($pat)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Missing GitHub URL or PAT.",
+        ));
+        return;
+    }
+
+    // Use the clone_github_repo function to handle the cloning
+    $clone_result = clone_github_repo($github_url, $pat);
+
+    if($clone_result['success']) {
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully cloned {$github_url}",
+        ));
+    } else {
+        wp_send_json(array(
+            'success' => false,
+            'message' => $clone_result['message'],
+        ));
+    }
+}
+
+
+add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
 
