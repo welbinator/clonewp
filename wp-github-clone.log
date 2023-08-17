@@ -1,0 +1,8 @@
+2023-08-16 12:03:26: fatal: destination path '/app/wp-content/plugins' already exists and is not an empty directory.
+
+2023-08-17 15:48:03: Cloning into '/app/wp-content/plugins/apex-branding-design.git'...
+fatal: could not read Username for 'https://github.com': No such device or address
+
+2023-08-17 15:49:50: Cloning into '/app/wp-content/themes/apex-branding-design.git'...
+fatal: could not read Username for 'https://github.com': No such device or address
+
