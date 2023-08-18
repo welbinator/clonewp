@@ -1,4 +1,5 @@
 jQuery(document).ready(function($) {
+
     // Event listener for the Pull button
     $(document).on('click', '.pull-repo', function(e) {
         e.preventDefault();
@@ -16,16 +17,19 @@ jQuery(document).ready(function($) {
                 nonce: wpGithubClone.nonce
             },
             success: function(response) {
+                console.log(response); // Log the full response
                 if (response.success) {
                     alert(response.message + "\n\nDetails:\n" + response.details);
-                    // Optionally, you can add more UI changes here, e.g., refreshing the page
                 } else {
                     alert(response.message + "\n\nError Details:\n" + response.details);
                 }
-            },
-            error: function() {
-                alert('An unexpected error occurred.');
             }
+            ,
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert('An unexpected error occurred. Check the console for more details.');
+            }
+            
         });
     });
 
@@ -38,6 +42,7 @@ jQuery(document).ready(function($) {
         }
 
         var repoName = $(this).data('repo-name');
+        var $repoListItem = $(this).closest('li'); // This selects the parent list item
 
         // Send AJAX request to WordPress to delete the repository
         $.ajax({
@@ -51,16 +56,73 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     alert(response.message);
-                    // Optionally, you can add more UI changes here, e.g., removing the repository from the list or refreshing the page
+                    $repoListItem.remove();  // Remove the repository list item from the page
                 } else {
                     alert(response.message);
                 }
             },
-            error: function() {
-                alert('An unexpected error occurred.');
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert('An unexpected error occurred. Check the console for more details.');
             }
+            
         });
     });
+
+    // Handle form submissions for cloning repositories
+    $('#tab-clone form').submit(function(e) {
+        e.preventDefault();
+
+        var githubUrl = $('#github-url').val();
+        var githubPat = $('#github-pat').val();
+
+        console.log("GitHub URL: ", githubUrl);
+console.log("GitHub PAT: ", githubPat);
+console.log("AJAX URL: ", wpGithubClone.ajax_url);
+console.log("Nonce: ", wpGithubClone.nonce);
+
+
+        $.ajax({
+            type: 'POST',
+            url: wpGithubClone.ajax_url,
+            data: {
+                action: 'wp_github_clone',
+                github_url: githubUrl,
+                github_pat: githubPat,
+                nonce: wpGithubClone.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+
+                    // Append new repo to the list
+                    var newRepoHtml = `
+                        <li>
+                            ${response.repo_name} 
+                            <button class="pull-repo" data-repo-name="${response.repo_name}">Pull</button>
+                            <button class="delete-repo" data-repo-name="${response.repo_name}">Delete</button>
+                        </li>
+                    `;
+
+                    // If the ul doesn't exist, we create it.
+                    if ($('#tab-repos ul').length === 0) {
+                        $('#tab-repos').append('<h2>Cloned Repositories</h2><ul></ul>');
+                    }
+
+                    $('#tab-repos ul').append(newRepoHtml);
+
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert('An unexpected error occurred. Check the console for more details.');
+            }
+            
+        });
+    });
+
     $('.nav-tab').click(function(e) {
         e.preventDefault();
         
@@ -70,4 +132,5 @@ jQuery(document).ready(function($) {
         $('.tab-content').hide();
         $($(this).attr('href')).show();
     });
+
 });
