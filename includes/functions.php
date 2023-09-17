@@ -1,47 +1,84 @@
 <?php
 
-function clone_github_repo($repo_url, $pat) {
-    wp_github_clone_log("Repo URL: " . $repo_url);
-    wp_github_clone_log("PAT: " . $pat);
-    // Extract repo name from the URL
-    $repo_parts = explode('/', rtrim($repo_url, '/')); 
-    $repo_name = end($repo_parts);
-    $theme_dir = WP_CONTENT_DIR . '/themes/' . $repo_name;
-    
-    if (is_dir($theme_dir)) {
-        return array('success' => false, 'message' => "The directory for repository {$repo_name} already exists.");
+/**
+ * Clone a GitHub repo.
+ *
+ * @param string $github_url           The GitHub repository URL.
+ * @param string $pat                  The personal access token.
+ * @param string $destination_directory The destination directory to clone the repo into.
+ * @return array                       An array containing success status and a message.
+ */
+function clone_github_repo($github_url, $pat, $destination_directory) {
+    // Validate the GitHub URL
+    if (!is_valid_github_url($github_url)) {
+        return array(
+            'success' => false,
+            'message' => 'Invalid GitHub URL.'
+        );
     }
 
-    $authenticated_repo_url = str_replace('https://', 'https://' . $pat . '@', $repo_url);
-    $command = 'git clone ' . escapeshellarg($authenticated_repo_url) . ' ' . escapeshellarg($theme_dir) . ' 2>&1';
-    $output = shell_exec($command);
+    // Extract the repo name from the GitHub URL
+    $parts = explode('/', rtrim($github_url, '/'));
+    $repo_name = end($parts);
+    
+    $full_destination_path = rtrim($destination_directory, '/') . '/' . $repo_name;
+    
 
-    if(strpos($output, 'fatal:') !== false) {
-        wp_github_clone_log($output);
-        return array('success' => false, 'message' => 'Failed to clone repository.');
+
+    // Check if the directory already exists
+    if (is_dir($full_destination_path)) {
+        return array(
+            'success' => false,
+            'message' => "Repository {$repo_name} already exists in the destination directory."
+        );
     }
 
-    // Save the PAT associated with the repo.
-    update_option('wp_github_clone_token_' . $repo_name, $pat);
+    // Run the git clone command
+    putenv("GIT_TERMINAL_PROMPT=0"); // This prevents git from asking for credentials
+    putenv("GIT_SSL_NO_VERIFY=true"); // Bypass SSL verification, might not be needed based on your setup
+
+    $output = shell_exec("git clone {$github_url} {$full_destination_path} 2>&1");
     
-    return [
-        'success' => true,
-        'message' => 'Repository cloned successfully.',
-        'repo_name' => $repo_name // This is the name of the cloned repository
-    ];
-    
+
+
+    // If the clone was successful
+    if (strpos($output, 'Checking out files') !== false || strpos($output, 'Cloning into') !== false) {
+        // Store the personal access token for this repo in the WordPress options table
+        if($pat) {
+            update_option("wp_github_clone_token_{$repo_name}", $pat);
+        }
+
+        return array(
+            'success' => true,
+            'message' => "Successfully cloned {$repo_name} into the specified directory.",
+            'repo_name' => $repo_name
+        );
+    } else {
+        return array(
+            'success' => false,
+            'message' => "Failed to clone {$github_url}.",
+            'details' => $output // Providing the git error message can be helpful for debugging.
+        );
+    }
 }
+
+
 
 function pull_repo_changes($local_path) {
     $path_parts = explode('/', rtrim($local_path, '/'));
     $repo_name = end($path_parts);
     $pat = get_option('wp_github_clone_token_' . $repo_name);
     
+    // if PAT isn't found, log it but don't return an error yet
     if (!$pat) {
-        return array('success' => false, 'message' => 'Personal Access Token not found.');
+        wp_github_clone_log("No Personal Access Token found for {$repo_name}. Trying to pull without PAT.");
     }
 
-    $command = 'git -C ' . escapeshellarg($local_path) . ' -c "user.password=' . escapeshellarg($pat) . '" pull 2>&1';
+    $command = 'git -C ' . escapeshellarg($local_path);
+    if ($pat) {
+        $command .= ' -c "user.password=' . escapeshellarg($pat) . '"';
+    }
+    $command .= ' pull 2>&1';
     $output = shell_exec($command);
 
     if(strpos($output, 'fatal:') !== false) {
@@ -51,6 +88,7 @@ function pull_repo_changes($local_path) {
 
     return array('success' => true, 'message' => 'Changes pulled successfully.', 'details' => $output);
 }
+
 
 
 function delete_local_repo($local_path) {
@@ -106,23 +144,42 @@ function get_cloned_repositories() {
 }
 
 //clone ajax handler
+//clone ajax handler
 function wp_github_clone_ajax_handler() {
-    error_log(print_r($_POST, true));
-
+    error_log("clone-type received: " . $_POST['clone_type']);
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
+    
+    $type = isset($_POST['clone_type']) ? sanitize_text_field($_POST['clone_type']) : 'theme';
+    error_log('type is ' . $type);
+    
+    // Determine the correct destination directory based on the type
+    $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
+    
     if (isset($_POST['github_url']) && isset($_POST['github_pat'])) {
-        $response = clone_github_repo($_POST['github_url'], $_POST['github_pat']);
+        $response = clone_github_repo($_POST['github_url'], $_POST['github_pat'], $destination_dir);
         wp_send_json($response);
     } else {
+        wp_send_json_error(array('message' => 'Missing GitHub URL or PAT.'));
     }
 }
+
 add_action('wp_ajax_wp_github_clone', 'wp_github_clone_ajax_handler');
 
 // pull ajax handler
 function wp_github_clone_pull_ajax_handler() {
+    
+
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
+    
+    $type = isset($_POST['clone-type']) ? sanitize_text_field($_POST['clone-type']) : 'theme';
+    
+
+    
+
+    $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
+
     if (isset($_POST['repo'])) {
-        $local_path = WP_CONTENT_DIR . '/themes/' . $_POST['repo'];
+        $local_path = $destination_dir . $_POST['repo'];
         $response = pull_repo_changes($local_path);
         wp_send_json($response);
     } else {
@@ -134,8 +191,12 @@ add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull_ajax_handler');
 // delete ajax handler
 function wp_github_clone_delete_ajax_handler() {
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
+    
+    $type = isset($_POST['clone-type']) ? $_POST['clone-type'] : 'theme';
+    $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
+
     if (isset($_POST['repo'])) {
-        $local_path = WP_CONTENT_DIR . '/themes/' . $_POST['repo'];
+        $local_path = $destination_dir . $_POST['repo'];
         $response = delete_local_repo($local_path);
         wp_send_json($response);
     } else {
@@ -143,6 +204,7 @@ function wp_github_clone_delete_ajax_handler() {
     }
 }
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete_ajax_handler');
+
 
 
 

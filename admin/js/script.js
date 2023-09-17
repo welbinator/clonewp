@@ -23,13 +23,11 @@ jQuery(document).ready(function($) {
                 } else {
                     alert(response.message + "\n\nError Details:\n" + response.details);
                 }
-            }
-            ,
+            },
             error: function(jqXHR, textStatus, errorThrown) {
                 console.error("Request failed: " + textStatus + " - " + errorThrown);
                 alert('An unexpected error occurred. Check the console for more details.');
             }
-            
         });
     });
 
@@ -42,7 +40,7 @@ jQuery(document).ready(function($) {
         }
 
         var repoName = $(this).data('repo-name');
-        var $repoListItem = $(this).closest('li'); // This selects the parent list item
+        var $repoListItem = $(this).closest('li');
 
         // Send AJAX request to WordPress to delete the repository
         $.ajax({
@@ -65,7 +63,6 @@ jQuery(document).ready(function($) {
                 console.error("Request failed: " + textStatus + " - " + errorThrown);
                 alert('An unexpected error occurred. Check the console for more details.');
             }
-            
         });
     });
 
@@ -73,20 +70,22 @@ jQuery(document).ready(function($) {
     $('#tab-clone form').submit(function(e) {
         e.preventDefault();
 
+        var cloneType = $('#clone-type').val();
         var githubUrl = $('#github-url').val();
         var githubPat = $('#github-pat').val();
 
+        console.log("Clone Type: ", cloneType);
         console.log("GitHub URL: ", githubUrl);
-console.log("GitHub PAT: ", githubPat);
-console.log("AJAX URL: ", wpGithubClone.ajax_url);
-console.log("Nonce: ", wpGithubClone.nonce);
-
+        console.log("GitHub PAT: ", githubPat);
+        console.log("AJAX URL: ", wpGithubClone.ajax_url);
+        console.log("Nonce: ", wpGithubClone.nonce);
 
         $.ajax({
             type: 'POST',
             url: wpGithubClone.ajax_url,
             data: {
                 action: 'wp_github_clone',
+                clone_type: cloneType, // sending the selected type (theme or plugin)
                 github_url: githubUrl,
                 github_pat: githubPat,
                 nonce: wpGithubClone.nonce
@@ -95,7 +94,6 @@ console.log("Nonce: ", wpGithubClone.nonce);
                 if (response.success) {
                     alert(response.message);
 
-                    // Append new repo to the list
                     var newRepoHtml = `
                         <li>
                             ${response.repo_name} 
@@ -104,7 +102,6 @@ console.log("Nonce: ", wpGithubClone.nonce);
                         </li>
                     `;
 
-                    // If the ul doesn't exist, we create it.
                     if ($('#tab-repos ul').length === 0) {
                         $('#tab-repos').append('<h2>Cloned Repositories</h2><ul></ul>');
                     }
@@ -119,16 +116,15 @@ console.log("Nonce: ", wpGithubClone.nonce);
                 console.error("Request failed: " + textStatus + " - " + errorThrown);
                 alert('An unexpected error occurred. Check the console for more details.');
             }
-            
         });
     });
 
     $('.nav-tab').click(function(e) {
         e.preventDefault();
-        
+
         $('.nav-tab').removeClass('nav-tab-active');
         $(this).addClass('nav-tab-active');
-        
+
         $('.tab-content').hide();
         $($(this).attr('href')).show();
     });
