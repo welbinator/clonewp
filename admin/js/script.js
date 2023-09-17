@@ -175,37 +175,25 @@ jQuery(document).ready(function($) {
     });
 
     // Function to fetch and display the list of cloned repositories
-function fetchAndDisplayRepos() {
-    $.ajax({
-        type: 'POST',
-        url: wpGithubClone.ajax_url,
-        data: {
-            action: 'wp_github_clone_fetch_repos',
-            nonce: wpGithubClone.nonce
-        },
-        success: function(response) {
-            if (response.success) {
-                var reposHtml = '';
-                $.each(response.repos, function(index, repoName) {
-                    reposHtml += `
-                        <li>
-                            ${repoName} 
-                            <button class="pull-repo" data-repo-name="${repoName}">Pull</button>
-                            <button class="delete-repo" data-repo-name="${repoName}">Delete</button>
-                        </li>
-                    `;
-                });
-                $('#tab-repos ul').html(reposHtml);
-            } else {
-                alert(response.message);
+    function fetchAndDisplayRepos() {
+        $.ajax({
+            type: 'POST',
+            url: wpGithubClone.ajax_url,
+            data: {
+                action: 'wp_github_clone_fetch_repos',
+                nonce: wpGithubClone.nonce
+            },
+            success: function(response) {
+                // Handle the successful response here
+                // For example, display the repos in the UI
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert('An unexpected error occurred. Check the console for more details.');
             }
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            console.error("Request failed: " + textStatus + " - " + errorThrown);
-            alert('An unexpected error occurred. Check the console for more details.');
-        }
-    });
-}
+        });
+    }
+    
 
 // Fetch and display the list of cloned repositories when the page loads
 fetchAndDisplayRepos();

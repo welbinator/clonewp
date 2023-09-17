@@ -53,7 +53,7 @@ add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_admin_styles');
 // AJAX handler for the Pull action
 function wp_github_clone_pull() {
    
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
 
@@ -114,7 +114,7 @@ add_action('admin_notices', 'wp_github_clone_admin_notices');
 
 // AJAX handler for the Delete action
 function wp_github_clone_delete() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         $errorDetails = isset($_POST['repo']) ? "Repo name was empty." : "Repo index not set in POST request.";
@@ -150,7 +150,7 @@ add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
 
 // AJAX handler for the Clone action
 function wp_github_clone_ajax() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     $github_url = isset($_POST['github-url']) ? sanitize_text_field($_POST['github-url']) : '';
     $pat = isset($_POST['github-pat']) ? sanitize_text_field($_POST['github-pat']) : '';
@@ -190,7 +190,7 @@ function wp_github_clone_ajax() {
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
 
 function wp_github_clone_nvm_install() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
 
@@ -225,7 +225,7 @@ function wp_github_clone_nvm_install() {
 add_action('wp_ajax_wp_github_clone_nvm_install', 'wp_github_clone_nvm_install');
 
 function wp_github_clone_composer_install() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
 
@@ -262,7 +262,7 @@ add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer
 
 function wp_github_clone_fetch_repos() {
     // Verify nonce for security
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     // Fetch the list of cloned repositories
     $cloned_repos = get_cloned_repositories();
