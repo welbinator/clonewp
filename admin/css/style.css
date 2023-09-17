@@ -22,3 +22,19 @@
 #tab-clone input[type="submit"] {
     margin-top: 20px!important;
 }
+#github-url-wrapper, #github-pat-wrapper, #github-button-wrapper {
+    display: none;
+}
+#github-clone-form div {
+    display: flex;
+    gap: 15px;
+}
+#github-clone-form div input {
+    flex-grow: 1;
+}
+
+@media screen and (max-width: 600px) {
+    #github-clone-form div {
+        flex-direction: column;
+    } 
+}

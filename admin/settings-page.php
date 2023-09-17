@@ -34,28 +34,32 @@ $cloned_repositories = get_cloned_repositories();
         </div>
     <?php endif; ?>
 
-    <form method="post">
+    <form method="post" id="github-clone-form">
     <?php wp_nonce_field('wp_github_clone_nonce'); ?>
 
         <label for="clone-type">Type:</label>
         <select id="clone-type" name="clone-type">
-            <option value="theme" selected>Theme</option>
+            <option value="select" selected>Make a selection</option>
+            <option value="theme">Theme</option>
             <option value="plugin">Plugin</option>
         </select>
 
         <br><br>
-
-        <label for="github-url">GitHub Repository URL:</label>
-        <input type="text" id="github-url" name="github-url">
-
+        <div id="github-url-wrapper">
+            <label for="github-url">GitHub Repository URL:</label>
+            <input type="text" id="github-url" name="github-url">
+        </div>
         <br><br>
 
-        <label for="github-pat">GitHub Personal Access Token:</label>
-        <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
-
+        <div id="github-pat-wrapper">
+            <label for="github-pat">GitHub Personal Access Token:</label>
+            <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
+        </div>
         <br><br>
 
-        <input type="submit" value="Clone Repository" class="button-primary">
+        <div id="github-button-wrapper">
+            <input type="submit" value="Clone Repository" class="button-primary" id="clone-button">
+        </div>
     </form>
     </div>
 

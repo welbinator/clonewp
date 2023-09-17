@@ -1,5 +1,16 @@
 jQuery(document).ready(function($) {
 
+    // When the dropdown value changes
+    $('#clone-type').change(function() {
+        var selection = $(this).val();
+        
+        // If the user selected either 'plugin' or 'theme'
+        if (selection === 'plugin' || selection === 'theme') {
+            // Show the fields and the button
+            $('#github-url-wrapper, #github-pat-wrapper, #github-button-wrapper').show();
+        } 
+    });
+
     // Event listener for the Pull button
     $(document).on('click', '.pull-repo', function(e) {
         e.preventDefault();
