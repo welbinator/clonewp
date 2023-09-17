@@ -260,3 +260,20 @@ function wp_github_clone_composer_install() {
 add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer_install');
 
 
+function wp_github_clone_fetch_repos() {
+    // Verify nonce for security
+    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+
+    // Fetch the list of cloned repositories
+    $cloned_repos = get_cloned_repositories();
+
+    if (!empty($cloned_repos)) {
+        wp_send_json_success(array('repos' => $cloned_repos));
+    } else {
+        wp_send_json_error(array('message' => 'No cloned repositories found.'));
+    }
+}
+
+add_action('wp_ajax_wp_github_clone_fetch_repos', 'wp_github_clone_fetch_repos');
+
+

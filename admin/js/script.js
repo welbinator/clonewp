@@ -125,12 +125,6 @@ jQuery(document).ready(function($) {
         var githubUrl = $('#github-url').val();
         var githubPat = $('#github-pat').val();
 
-        console.log("Clone Type: ", cloneType);
-        console.log("GitHub URL: ", githubUrl);
-        console.log("GitHub PAT: ", githubPat);
-        console.log("AJAX URL: ", wpGithubClone.ajax_url);
-        console.log("Nonce: ", wpGithubClone.nonce);
-
         $.ajax({
             type: 'POST',
             url: wpGithubClone.ajax_url,
@@ -179,5 +173,41 @@ jQuery(document).ready(function($) {
         $('.tab-content').hide();
         $($(this).attr('href')).show();
     });
+
+    // Function to fetch and display the list of cloned repositories
+function fetchAndDisplayRepos() {
+    $.ajax({
+        type: 'POST',
+        url: wpGithubClone.ajax_url,
+        data: {
+            action: 'wp_github_clone_fetch_repos',
+            nonce: wpGithubClone.nonce
+        },
+        success: function(response) {
+            if (response.success) {
+                var reposHtml = '';
+                $.each(response.repos, function(index, repoName) {
+                    reposHtml += `
+                        <li>
+                            ${repoName} 
+                            <button class="pull-repo" data-repo-name="${repoName}">Pull</button>
+                            <button class="delete-repo" data-repo-name="${repoName}">Delete</button>
+                        </li>
+                    `;
+                });
+                $('#tab-repos ul').html(reposHtml);
+            } else {
+                alert(response.message);
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error("Request failed: " + textStatus + " - " + errorThrown);
+            alert('An unexpected error occurred. Check the console for more details.');
+        }
+    });
+}
+
+// Fetch and display the list of cloned repositories when the page loads
+fetchAndDisplayRepos();
 
 });
