@@ -52,12 +52,9 @@ add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_admin_styles');
 
 // AJAX handler for the Pull action
 function wp_github_clone_pull() {
-   
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
-    $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
-
-    if (empty($repo_name)) {
+    if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         wp_send_json(array(
             'success' => false,
             'message' => "Repository name not provided."
@@ -65,40 +62,40 @@ function wp_github_clone_pull() {
         return;
     }
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $repo_name = sanitize_text_field($_POST['repo']);
 
-    // Fetch the PAT associated with this repo
-    $token = get_option('wp_github_clone_token_' . $repo_name);
+    // Check both the themes and plugins directories
+    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
 
-    // Add the token to the local git config for this repo
-    shell_exec("git -C {$repo_path} config credential.helper 'store --file=.git/credentials'");
-    shell_exec("git -C {$repo_path} config credential.username {$token}");
-
-    putenv("COMPOSER_HOME=" . sys_get_temp_dir() . "/composer");
-
-    // Capture the output and errors of the git pull command
-    $output = shell_exec("git -C {$repo_path} pull 2>&1");
-
-    // Adjust as necessary based on your experience with typical git pull outputs.
-    if (strpos($output, 'Already up to date') !== false || strpos($output, 'Fast-forward') !== false) {
-        set_transient('wp_github_clone_pull_success', true, 5); // This sets a transient for 5 seconds
+    if (is_dir($theme_repo_path)) {
+        // Execute git pull for the repository in the themes directory
+        chdir($theme_repo_path);
+        $output = shell_exec('git pull');
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully pulled changes for {$repo_name}",
-            'details' => $output // This provides additional info about the pull.
+            'message' => "Successfully pulled {$repo_name} from themes",
+            'details' => $output
         ));
-
+    } elseif (is_dir($plugin_repo_path)) {
+        // Execute git pull for the repository in the plugins directory
+        chdir($plugin_repo_path);
+        $output = shell_exec('git pull');
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully pulled {$repo_name} from plugins",
+            'details' => $output
+        ));
     } else {
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to pull changes for {$repo_name}",
-            'details' => $output // This provides details on why the pull failed.
+            'message' => "Failed to pull {$repo_name}. Directory not found in themes or plugins."
         ));
-
     }
 }
-
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull');
+
+
 
 function wp_github_clone_admin_notices() {
     if (get_transient('wp_github_clone_pull_success')) {
@@ -112,50 +109,7 @@ function wp_github_clone_admin_notices() {
 }
 add_action('admin_notices', 'wp_github_clone_admin_notices');
 
-// AJAX handler for the Delete action
-// function wp_github_clone_delete() {
-//     error_reporting(E_ALL);
-// ini_set('display_errors', 1);
 
-//     check_ajax_referer('wp_github_clone_nonce', 'nonce');
-
-//     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
-//         $errorDetails = isset($_POST['repo']) ? "Repo name was empty." : "Repo index not set in POST request.";
-//         wp_send_json(array(
-//             'success' => false,
-//             'message' => "Repository name not provided.",
-//             'details' => $errorDetails
-//         ));
-//         return;
-//     }
-    
-//     $repo_name = sanitize_text_field($_POST['repo']);
-    
-//     error_log("Attempting to delete repository: " . $repo_name);
-
-//     // Check both the themes and plugins directories
-//     $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
-//     $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
-
-//     if (is_dir($theme_repo_path)) {
-//         rrmdir($theme_repo_path);
-//         wp_send_json(array(
-//             'success' => true,
-//             'message' => "Successfully deleted {$repo_name} from themes"
-//         ));
-//     } elseif (is_dir($plugin_repo_path)) {
-//         rrmdir($plugin_repo_path);
-//         wp_send_json(array(
-//             'success' => true,
-//             'message' => "Successfully deleted {$repo_name} from plugins"
-//         ));
-//     } else {
-//         wp_send_json(array(
-//             'success' => false,
-//             'message' => "Failed to delete {$repo_name}. Directory not found in themes or plugins."
-//         ));
-//     }
-// }
 function wp_github_clone_delete() {
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
@@ -272,6 +226,7 @@ function wp_github_clone_ajax() {
 
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
 
+// AJAX handler for the nvm install action
 function wp_github_clone_nvm_install() {
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
@@ -285,7 +240,19 @@ function wp_github_clone_nvm_install() {
         return;
     }
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    // Check both the themes and plugins directories
+    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
+
+    $repo_path = is_dir($theme_repo_path) ? $theme_repo_path : (is_dir($plugin_repo_path) ? $plugin_repo_path : '');
+
+    if (!$repo_path) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository directory not found in themes or plugins."
+        ));
+        return;
+    }
 
     // Execute the nvm install command
     $output = shell_exec("cd {$repo_path} && nvm install 2>&1");
@@ -304,9 +271,9 @@ function wp_github_clone_nvm_install() {
         ));
     }
 }
-
 add_action('wp_ajax_wp_github_clone_nvm_install', 'wp_github_clone_nvm_install');
 
+// AJAX handler for the composer install action
 function wp_github_clone_composer_install() {
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
@@ -320,7 +287,19 @@ function wp_github_clone_composer_install() {
         return;
     }
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    // Check both the themes and plugins directories
+    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
+
+    $repo_path = is_dir($theme_repo_path) ? $theme_repo_path : (is_dir($plugin_repo_path) ? $plugin_repo_path : '');
+
+    if (!$repo_path) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository directory not found in themes or plugins."
+        ));
+        return;
+    }
 
     // Execute the composer install command
     $output = shell_exec("cd {$repo_path} && composer install 2>&1");
@@ -339,7 +318,6 @@ function wp_github_clone_composer_install() {
         ));
     }
 }
-
 add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer_install');
 
 
