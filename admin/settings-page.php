@@ -66,20 +66,18 @@ $cloned_repositories = get_cloned_repositories();
     <div class="tab-content" id="tab-repos" style="display:none;">
     <!-- Display list of cloned repositories with Pull and Delete buttons -->
     <?php if (!empty($cloned_repositories)): ?>
-        <h2>Cloned Repositories</h2>
-        <ul>
-            <?php foreach ($cloned_repositories as $repo_name => $repo_pat): ?>
-                <li>
-                    <?php echo esc_html($repo_name); ?>
-                    <!-- We're not displaying $repo_pat for security reasons! -->
-                    <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
-                    <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
-                    <button class="nvm-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">nvm install</button>
-                    <button class="composer-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">composer install</button>
+    <h2>Cloned Repositories</h2>
+    <ul>
+        <?php foreach ($cloned_repositories as $repo_name): ?>
+            <li>
+                <?php echo esc_html($repo_name); ?>
+                <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
+                <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
+                <button class="nvm-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">nvm install</button>
+                <button class="composer-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">composer install</button>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>
 
-
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    <?php endif; ?>
 </div>

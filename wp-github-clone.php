@@ -113,6 +113,49 @@ function wp_github_clone_admin_notices() {
 add_action('admin_notices', 'wp_github_clone_admin_notices');
 
 // AJAX handler for the Delete action
+// function wp_github_clone_delete() {
+//     error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+
+//     check_ajax_referer('wp_github_clone_nonce', 'nonce');
+
+//     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
+//         $errorDetails = isset($_POST['repo']) ? "Repo name was empty." : "Repo index not set in POST request.";
+//         wp_send_json(array(
+//             'success' => false,
+//             'message' => "Repository name not provided.",
+//             'details' => $errorDetails
+//         ));
+//         return;
+//     }
+    
+//     $repo_name = sanitize_text_field($_POST['repo']);
+    
+//     error_log("Attempting to delete repository: " . $repo_name);
+
+//     // Check both the themes and plugins directories
+//     $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+//     $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
+
+//     if (is_dir($theme_repo_path)) {
+//         rrmdir($theme_repo_path);
+//         wp_send_json(array(
+//             'success' => true,
+//             'message' => "Successfully deleted {$repo_name} from themes"
+//         ));
+//     } elseif (is_dir($plugin_repo_path)) {
+//         rrmdir($plugin_repo_path);
+//         wp_send_json(array(
+//             'success' => true,
+//             'message' => "Successfully deleted {$repo_name} from plugins"
+//         ));
+//     } else {
+//         wp_send_json(array(
+//             'success' => false,
+//             'message' => "Failed to delete {$repo_name}. Directory not found in themes or plugins."
+//         ));
+//     }
+// }
 function wp_github_clone_delete() {
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
@@ -128,25 +171,65 @@ function wp_github_clone_delete() {
     
     $repo_name = sanitize_text_field($_POST['repo']);
     
+    error_log("Attempting to delete repository: " . $repo_name);
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    // Check both the themes and plugins directories
+    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
 
-    if (is_dir($repo_path)) {
-        // Use a recursive directory delete function to delete the repo
-        rrmdir($repo_path);
-
+    if (is_dir($theme_repo_path)) {
+        rrmdir($theme_repo_path);
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully deleted {$repo_name}"
+            'message' => "Successfully deleted {$repo_name} from themes"
+        ));
+    } elseif (is_dir($plugin_repo_path)) {
+        rrmdir($plugin_repo_path);
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully deleted {$repo_name} from plugins"
         ));
     } else {
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to delete {$repo_name}. Directory not found."
+            'message' => "Failed to delete {$repo_name}. Directory not found in themes or plugins."
         ));
     }
 }
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
+
+// New rrmdir function
+function rrmdir($dir) {
+    if (!is_dir($dir)) {
+        return;
+    }
+
+    $it = new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS);
+    $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+
+    foreach ($files as $file) {
+        if ($file->isDir()) {
+            if (!rmdir($file->getRealPath())) {
+                error_log("Failed to delete directory: " . $file->getRealPath());
+            }
+        } else {
+            if (!unlink($file->getRealPath())) {
+                error_log("Failed to delete file: " . $file->getRealPath());
+            }
+        }
+    }
+
+    if (!rmdir($dir)) {
+        error_log("Failed to delete main directory: " . $dir);
+    }
+}
+
+
+
+
+add_action('wp_ajax_test_github_clone_delete', 'wp_github_clone_delete');
+
+
 
 // AJAX handler for the Clone action
 function wp_github_clone_ajax() {
@@ -260,20 +343,5 @@ function wp_github_clone_composer_install() {
 add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer_install');
 
 
-function wp_github_clone_fetch_repos() {
-    // Verify nonce for security
-    check_ajax_referer('wp_github_clone_nonce', 'nonce');
-
-    // Fetch the list of cloned repositories
-    $cloned_repos = get_cloned_repositories();
-
-    if (!empty($cloned_repos)) {
-        wp_send_json_success(array('repos' => $cloned_repos));
-    } else {
-        wp_send_json_error(array('message' => 'No cloned repositories found.'));
-    }
-}
-
-add_action('wp_ajax_wp_github_clone_fetch_repos', 'wp_github_clone_fetch_repos');
 
 

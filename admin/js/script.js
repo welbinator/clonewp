@@ -84,6 +84,7 @@ jQuery(document).ready(function($) {
 
     // Event listener for the Delete button
     $(document).on('click', '.delete-repo', function(e) {
+        console.log("Delete button clicked for repo:", $(this).data('repo-name'));
         e.preventDefault();
 
         if (!confirm('Are you sure you want to delete this repository? This action cannot be undone.')) {
@@ -98,7 +99,7 @@ jQuery(document).ready(function($) {
             type: 'POST',
             url: wpGithubClone.ajax_url,
             data: {
-                action: 'wp_github_clone_delete',
+                action: 'test_github_clone_delete',
                 repo: repoName,
                 nonce: wpGithubClone.nonce
             },
@@ -162,6 +163,8 @@ jQuery(document).ready(function($) {
                 alert('An unexpected error occurred. Check the console for more details.');
             }
         });
+        console.log("AJAX URL:", wpGithubClone.ajax_url);
+
     });
 
     $('.nav-tab').click(function(e) {
@@ -174,28 +177,6 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).show();
     });
 
-    // Function to fetch and display the list of cloned repositories
-    function fetchAndDisplayRepos() {
-        $.ajax({
-            type: 'POST',
-            url: wpGithubClone.ajax_url,
-            data: {
-                action: 'wp_github_clone_fetch_repos',
-                nonce: wpGithubClone.nonce
-            },
-            success: function(response) {
-                // Handle the successful response here
-                // For example, display the repos in the UI
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Request failed: " + textStatus + " - " + errorThrown);
-                alert('An unexpected error occurred. Check the console for more details.');
-            }
-        });
-    }
-    
 
-// Fetch and display the list of cloned repositories when the page loads
-fetchAndDisplayRepos();
 
 });

@@ -128,25 +128,38 @@ function wp_github_clone_log($message) {
 
 function get_cloned_repositories() {
     $repos = [];
-    $stored_repos_with_pat = get_option('wp_github_clone_repos', []); // Retrieve saved repositories with PATs
 
-    $dir = new DirectoryIterator(WP_CONTENT_DIR . '/themes');
-    foreach ($dir as $fileinfo) {
-        if ($fileinfo->isDir() && !$fileinfo->isDot()) {
-            if (file_exists($fileinfo->getPathname() . '/.git')) {
-                $repo_name = $fileinfo->getFilename();
-                $repos[$repo_name] = isset($stored_repos_with_pat[$repo_name]) ? $stored_repos_with_pat[$repo_name] : '';
+    // Directories to search for cloned repositories
+    $directories = [
+        WP_CONTENT_DIR . '/themes',
+        WP_CONTENT_DIR . '/plugins'
+    ];
+
+    foreach ($directories as $directory) {
+        if ($handle = opendir($directory)) {
+            while (false !== ($entry = readdir($handle))) {
+                if ($entry != "." && $entry != ".." && $entry != "wp-github-clone" && is_dir($directory . '/' . $entry) && is_dir($directory . '/' . $entry . '/.git')) {
+                    $repos[] = $entry;
+                }
+                
             }
+            closedir($handle);
         }
     }
+
+    // Remove duplicates, if any
+    $repos = array_unique($repos, SORT_STRING);
+    
+
 
     return $repos;
 }
 
+
 //clone ajax handler
 //clone ajax handler
 function wp_github_clone_ajax_handler() {
-    error_log("clone-type received: " . $_POST['clone_type']);
+    
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
     
     $type = isset($_POST['clone_type']) ? sanitize_text_field($_POST['clone_type']) : 'theme';
