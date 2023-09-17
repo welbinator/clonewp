@@ -1,5 +1,45 @@
 jQuery(document).ready(function($) {
+    jQuery('.nvm-install').on('click', function() {
+        var repoName = jQuery(this).data('repo-name');
+    
+        jQuery.ajax({
+            url: wpGithubClone.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'wp_github_clone_nvm_install',
+                nonce: wpGithubClone.nonce,
+                repo: repoName
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            }
+        });
+    });
 
+    jQuery('.composer-install').on('click', function() {
+        var repoName = jQuery(this).data('repo-name');
+    
+        jQuery.ajax({
+            url: wpGithubClone.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'wp_github_clone_composer_install',
+                nonce: wpGithubClone.nonce,
+                repo: repoName
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            }
+        });
+    });
     // When the dropdown value changes
     $('#clone-type').change(function() {
         var selection = $(this).val();

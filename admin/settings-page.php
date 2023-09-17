@@ -74,6 +74,10 @@ $cloned_repositories = get_cloned_repositories();
                     <!-- We're not displaying $repo_pat for security reasons! -->
                     <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
                     <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
+                    <button class="nvm-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">nvm install</button>
+                    <button class="composer-install" data-repo-name="<?php echo esc_attr($repo_name); ?>">composer install</button>
+
+
                 </li>
             <?php endforeach; ?>
         </ul>

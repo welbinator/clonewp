@@ -187,7 +187,76 @@ function wp_github_clone_ajax() {
     }
 }
 
-
-
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
+
+function wp_github_clone_nvm_install() {
+    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+
+    $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
+
+    if (empty($repo_name)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository name not provided."
+        ));
+        return;
+    }
+
+    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    // Execute the nvm install command
+    $output = shell_exec("cd {$repo_path} && nvm install 2>&1");
+
+    if (strpos($output, 'Now using node') !== false) {
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully ran nvm install for {$repo_name}",
+            'details' => $output
+        ));
+    } else {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Failed to run nvm install for {$repo_name}",
+            'details' => $output
+        ));
+    }
+}
+
+add_action('wp_ajax_wp_github_clone_nvm_install', 'wp_github_clone_nvm_install');
+
+function wp_github_clone_composer_install() {
+    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+
+    $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
+
+    if (empty($repo_name)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Repository name not provided."
+        ));
+        return;
+    }
+
+    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    // Execute the composer install command
+    $output = shell_exec("cd {$repo_path} && composer install 2>&1");
+
+    if (strpos($output, 'Generating autoload files') !== false) {
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully ran composer install for {$repo_name}",
+            'details' => $output
+        ));
+    } else {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Failed to run composer install for {$repo_name}",
+            'details' => $output
+        ));
+    }
+}
+
+add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer_install');
+
 
