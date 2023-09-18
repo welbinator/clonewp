@@ -164,7 +164,15 @@ function wp_github_clone_ajax() {
     }
 
     // Use the clone_github_repo function to handle the cloning
-    $clone_result = clone_github_repo($github_url, $pat);
+    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'theme';
+
+    // Decide the destination directory based on type
+    $destination_directory = WP_CONTENT_DIR . '/themes'; // Default to themes
+    if ($type === 'plugin') {
+        $destination_directory = WP_CONTENT_DIR . '/plugins';
+    }
+
+    $clone_result = clone_github_repo($github_url, $pat, $destination_directory);
 
     if($clone_result['success']) {
         wp_send_json(array(
@@ -178,6 +186,7 @@ function wp_github_clone_ajax() {
         ));
     }
 }
+
 
 
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');

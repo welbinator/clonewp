@@ -1,5 +1,4 @@
 <?php
-
 if (!current_user_can('manage_options')) {
     return;
 }
@@ -9,7 +8,6 @@ $success_message = '';
 
 // Retrieve the list of cloned repositories and their PATs.
 $cloned_repositories = get_cloned_repositories();
-
 ?>
 
 <div class="wrap">
@@ -21,8 +19,8 @@ $cloned_repositories = get_cloned_repositories();
     </h2>
 
     <div class="tab-content" id="tab-clone">
-
-    <h3>Clone a new Theme from GitHub</h3>
+    <h3>Clone a new Repository from GitHub</h3>
+    
     <!-- Display any messages -->
     <?php if (!empty($error_message)): ?>
         <div class="notice notice-error">
@@ -39,16 +37,29 @@ $cloned_repositories = get_cloned_repositories();
     <form method="post">
     <?php wp_nonce_field('wp_github_clone_nonce'); ?>
 
+        <label for="clone-type">Type:</label>
+        <select id="clone-type" name="clone-type">
+            <option value="theme" selected>Theme</option>
+            <option value="plugin">Plugin</option>
+        </select>
+
+        <br><br>
+
         <label for="github-url">GitHub Repository URL:</label>
         <input type="text" id="github-url" name="github-url">
+
+        <br><br>
+
         <label for="github-pat">GitHub Personal Access Token:</label>
         <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
+
+        <br><br>
+
         <input type="submit" value="Clone Repository" class="button-primary">
     </form>
     </div>
 
     <div class="tab-content" id="tab-repos" style="display:none;">
-
     <!-- Display list of cloned repositories with Pull and Delete buttons -->
     <?php if (!empty($cloned_repositories)): ?>
         <h2>Cloned Repositories</h2>
