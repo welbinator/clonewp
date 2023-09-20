@@ -58,6 +58,12 @@ jQuery(document).ready(function($) {
         var repoName = $(this).data('repo-name');
         console.log("Repo Name:", repoName);
 
+        console.log({
+            action: 'wp_github_clone_pull',
+            repo: repoName,
+            nonce: wpGithubClone.nonce
+        });
+        
         // Send AJAX request to WordPress to initiate the git pull
         $.ajax({
             type: 'POST',

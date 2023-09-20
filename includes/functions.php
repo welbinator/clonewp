@@ -219,5 +219,9 @@ function wp_github_clone_delete_ajax_handler() {
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete_ajax_handler');
 
 
-
-
+add_action('init', function() {
+    if (isset($_GET['manual_pull'])) {
+        wp_github_clone_pull();
+        exit;
+    }
+});
