@@ -66,40 +66,34 @@ function wp_github_clone_pull() {
 
     $repo_name = sanitize_text_field($_POST['repo']);
 
-    // Check both the themes and plugins directories
-    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
-    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
-    error_log("Checking theme repo path: " . $theme_repo_path);
-    error_log("Checking plugin repo path: " . $plugin_repo_path);
+    // Retrieve the repository type from the database
+    $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme'); // Default to 'theme' if not found
+
+    // Determine the path based on the repository type
+    $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    error_log("Checking repo path: " . $repo_path);
     
-    if (is_dir($theme_repo_path)) {
-        error_log("Found directory in themes: " . $theme_repo_path);
-        // Execute git pull for the repository in the themes directory
-        chdir($theme_repo_path);
+    if (is_dir($repo_path)) {
+        // Execute git pull for the repository
+        chdir($repo_path);
         $output = shell_exec('git pull');
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully pulled {$repo_name} from themes",
-            'details' => $output
-        ));
-    } elseif (is_dir($plugin_repo_path)) {
-        error_log("Found directory in plugins: " . $plugin_repo_path);
-        // Execute git pull for the repository in the plugins directory
-        chdir($plugin_repo_path);
-        $output = shell_exec('git pull');
-        wp_send_json(array(
-            'success' => true,
-            'message' => "Successfully pulled {$repo_name} from plugins",
+            'message' => "Successfully pulled {$repo_name} from {$repo_type}s", // 'themes' or 'plugins'
             'details' => $output
         ));
     } else {
-        error_log("Directory not found in themes or plugins for repo: " . $repo_name);
+        error_log("Directory not found in {$repo_type}s for repo: " . $repo_name);
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to pull {$repo_name}. Directory not found in themes or plugins."
+            'message' => "Failed to pull {$repo_name}. Directory not found in {$repo_type}s." // 'themes' or 'plugins'
         ));
     }
 }
+
+
+
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull');
 
 
@@ -215,8 +209,10 @@ function wp_github_clone_ajax() {
     if ($type === 'plugin') {
         $destination_directory = WP_CONTENT_DIR . '/plugins';
     }
-
-    $clone_result = clone_github_repo($github_url, $pat, $destination_directory);
+    error_log("Repo type before calling clone_github_repo: {$type}");
+    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type);
+    
+    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type);
 
     if($clone_result['success']) {
         wp_send_json(array(

@@ -8,7 +8,7 @@
  * @param string $destination_directory The destination directory to clone the repo into.
  * @return array                       An array containing success status and a message.
  */
-function clone_github_repo($github_url, $pat, $destination_directory) {
+function clone_github_repo($github_url, $pat, $destination_directory, $type) {
     // Validate the GitHub URL
     if (!is_valid_github_url($github_url)) {
         return array(
@@ -22,8 +22,6 @@ function clone_github_repo($github_url, $pat, $destination_directory) {
     $repo_name = end($parts);
     
     $full_destination_path = rtrim($destination_directory, '/') . '/' . $repo_name;
-    
-
 
     // Check if the directory already exists
     if (is_dir($full_destination_path)) {
@@ -38,8 +36,6 @@ function clone_github_repo($github_url, $pat, $destination_directory) {
     putenv("GIT_SSL_NO_VERIFY=true"); // Bypass SSL verification, might not be needed based on your setup
 
     $output = shell_exec("git clone {$github_url} {$full_destination_path} 2>&1");
-    
-
 
     // If the clone was successful
     if (strpos($output, 'Checking out files') !== false || strpos($output, 'Cloning into') !== false) {
@@ -47,6 +43,11 @@ function clone_github_repo($github_url, $pat, $destination_directory) {
         if($pat) {
             update_option("wp_github_clone_token_{$repo_name}", $pat);
         }
+        error_log("Attempting to save repo type for {$repo_name} as {$type}");
+        
+        
+        // Store the repository type in the database
+        update_option("wp_github_clone_type_{$repo_name}", $type);
 
         return array(
             'success' => true,
@@ -61,6 +62,7 @@ function clone_github_repo($github_url, $pat, $destination_directory) {
         );
     }
 }
+
 
 
 
@@ -169,7 +171,7 @@ function wp_github_clone_ajax_handler() {
     $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
     
     if (isset($_POST['github_url']) && isset($_POST['github_pat'])) {
-        $response = clone_github_repo($_POST['github_url'], $_POST['github_pat'], $destination_dir);
+        $response = clone_github_repo($_POST['github_url'], $_POST['github_pat'], $destination_dir, $type);
         wp_send_json($response);
     } else {
         wp_send_json_error(array('message' => 'Missing GitHub URL or PAT.'));
@@ -180,25 +182,25 @@ add_action('wp_ajax_wp_github_clone', 'wp_github_clone_ajax_handler');
 
 // pull ajax handler
 function wp_github_clone_pull_ajax_handler() {
-    
-
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
-    
-    $type = isset($_POST['clone-type']) ? sanitize_text_field($_POST['clone-type']) : 'theme';
-    
 
-    
-
-    $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
-
-    if (isset($_POST['repo'])) {
-        $local_path = $destination_dir . $_POST['repo'];
-        $response = pull_repo_changes($local_path);
-        wp_send_json($response);
-    } else {
+    if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         wp_send_json_error(array('message' => 'Missing repository name.'));
+        return;
     }
+
+    $repo_name = sanitize_text_field($_POST['repo']);
+
+    // Retrieve the repository type from the database
+    $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme'); // Default to 'theme' if not found
+
+    // Determine the path based on the repository type
+    $local_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    $response = pull_repo_changes($local_path);
+    wp_send_json($response);
 }
+
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull_ajax_handler');
 
 // delete ajax handler
