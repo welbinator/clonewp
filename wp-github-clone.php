@@ -52,12 +52,11 @@ add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_admin_styles');
 
 // AJAX handler for the Pull action
 function wp_github_clone_pull() {
-   
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    error_log("POST data: " . print_r($_POST, true));
 
-    $repo_name = isset($_POST['repo']) ? sanitize_text_field($_POST['repo']) : '';
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
-    if (empty($repo_name)) {
+    if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         wp_send_json(array(
             'success' => false,
             'message' => "Repository name not provided."
@@ -65,40 +64,39 @@ function wp_github_clone_pull() {
         return;
     }
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $repo_name = sanitize_text_field($_POST['repo']);
 
-    // Fetch the PAT associated with this repo
-    $token = get_option('wp_github_clone_token_' . $repo_name);
+    // Retrieve the repository type from the database
+    $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme'); // Default to 'theme' if not found
 
-    // Add the token to the local git config for this repo
-    shell_exec("git -C {$repo_path} config credential.helper 'store --file=.git/credentials'");
-    shell_exec("git -C {$repo_path} config credential.username {$token}");
+    // Determine the path based on the repository type
+    $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
 
-    putenv("COMPOSER_HOME=" . sys_get_temp_dir() . "/composer");
-
-    // Capture the output and errors of the git pull command
-    $output = shell_exec("git -C {$repo_path} pull 2>&1");
-
-    // Adjust as necessary based on your experience with typical git pull outputs.
-    if (strpos($output, 'Already up to date') !== false || strpos($output, 'Fast-forward') !== false) {
-        set_transient('wp_github_clone_pull_success', true, 5); // This sets a transient for 5 seconds
+    error_log("Checking repo path: " . $repo_path);
+    
+    if (is_dir($repo_path)) {
+        // Execute git pull for the repository
+        chdir($repo_path);
+        $output = shell_exec('git pull');
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully pulled changes for {$repo_name}",
-            'details' => $output // This provides additional info about the pull.
+            'message' => "Successfully pulled {$repo_name} from {$repo_type}s", // 'themes' or 'plugins'
+            'details' => $output
         ));
-
     } else {
+        error_log("Directory not found in {$repo_type}s for repo: " . $repo_name);
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to pull changes for {$repo_name}",
-            'details' => $output // This provides details on why the pull failed.
+            'message' => "Failed to pull {$repo_name}. Directory not found in {$repo_type}s." // 'themes' or 'plugins'
         ));
-
     }
 }
 
+
+
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull');
+
+
 
 function wp_github_clone_admin_notices() {
     if (get_transient('wp_github_clone_pull_success')) {
@@ -112,9 +110,9 @@ function wp_github_clone_admin_notices() {
 }
 add_action('admin_notices', 'wp_github_clone_admin_notices');
 
-// AJAX handler for the Delete action
+
 function wp_github_clone_delete() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         $errorDetails = isset($_POST['repo']) ? "Repo name was empty." : "Repo index not set in POST request.";
@@ -128,43 +126,90 @@ function wp_github_clone_delete() {
     
     $repo_name = sanitize_text_field($_POST['repo']);
     
+    error_log("Attempting to delete repository: " . $repo_name);
 
-    $repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    // Check both the themes and plugins directories
+    $theme_repo_path = WP_CONTENT_DIR . '/themes/' . $repo_name;
+    $plugin_repo_path = WP_CONTENT_DIR . '/plugins/' . $repo_name;
 
-    if (is_dir($repo_path)) {
-        // Use a recursive directory delete function to delete the repo
-        rrmdir($repo_path);
-
+    if (is_dir($theme_repo_path)) {
+        rrmdir($theme_repo_path);
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully deleted {$repo_name}"
+            'message' => "Successfully deleted {$repo_name} from themes"
+        ));
+    } elseif (is_dir($plugin_repo_path)) {
+        rrmdir($plugin_repo_path);
+        wp_send_json(array(
+            'success' => true,
+            'message' => "Successfully deleted {$repo_name} from plugins"
         ));
     } else {
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to delete {$repo_name}. Directory not found."
+            'message' => "Failed to delete {$repo_name}. Directory not found in themes or plugins."
         ));
     }
 }
 add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
 
+// New rrmdir function
+function rrmdir($dir) {
+    if (!is_dir($dir)) {
+        return;
+    }
+
+    $it = new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS);
+    $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+
+    foreach ($files as $file) {
+        if ($file->isDir()) {
+            if (!rmdir($file->getRealPath())) {
+                error_log("Failed to delete directory: " . $file->getRealPath());
+            }
+        } else {
+            if (!unlink($file->getRealPath())) {
+                error_log("Failed to delete file: " . $file->getRealPath());
+            }
+        }
+    }
+
+    if (!rmdir($dir)) {
+        error_log("Failed to delete main directory: " . $dir);
+    }
+}
+
+
+
+
+add_action('wp_ajax_test_github_clone_delete', 'wp_github_clone_delete');
+
+
+
 // AJAX handler for the Clone action
 function wp_github_clone_ajax() {
-    check_ajax_referer('wp-github-clone-nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
 
     $github_url = isset($_POST['github-url']) ? sanitize_text_field($_POST['github-url']) : '';
     $pat = isset($_POST['github-pat']) ? sanitize_text_field($_POST['github-pat']) : '';
+    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'theme';
+    $repo_access_type = isset($_POST['repo-access-type']) ? sanitize_text_field($_POST['repo-access-type']) : 'public';
 
-    if(empty($github_url) || empty($pat)) {
+    if (empty($github_url)) {
         wp_send_json(array(
             'success' => false,
-            'message' => "Missing GitHub URL or PAT.",
+            'message' => "Missing GitHub URL.",
         ));
         return;
     }
 
-    // Use the clone_github_repo function to handle the cloning
-    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'theme';
+    if ($repo_access_type === 'private' && empty($pat)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Missing Personal Access Token for a private repository.",
+        ));
+        return;
+    }
 
     // Decide the destination directory based on type
     $destination_directory = WP_CONTENT_DIR . '/themes'; // Default to themes
@@ -172,9 +217,10 @@ function wp_github_clone_ajax() {
         $destination_directory = WP_CONTENT_DIR . '/plugins';
     }
 
-    $clone_result = clone_github_repo($github_url, $pat, $destination_directory);
+    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type, $access_type);
 
-    if($clone_result['success']) {
+
+    if ($clone_result['success']) {
         wp_send_json(array(
             'success' => true,
             'message' => "Successfully cloned {$github_url}",
@@ -187,7 +233,14 @@ function wp_github_clone_ajax() {
     }
 }
 
-
-
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
+
+
+
+
+
+
+
+
+
 

@@ -16,7 +16,7 @@
 #tab-clone form {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 20px;
     max-width: 600px;
 }
 #tab-clone input[type="submit"] {
@@ -26,15 +26,20 @@
     display: none;
 }
 #github-clone-form div {
-    display: flex;
+    
+    flex-direction: column;
     gap: 15px;
 }
 #github-clone-form div input {
     flex-grow: 1;
 }
+ #github-privacy-wrapper,
+ #github-url-wrapper,
+ #github-pat-wrapper,
+ #github-button-wrapper {
+    display: none;
+}
 
 @media screen and (max-width: 600px) {
-    #github-clone-form div {
-        flex-direction: column;
-    } 
+    
 }

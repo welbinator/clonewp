@@ -1,5 +1,5 @@
 jQuery(document).ready(function($) {
-
+    
     // When the dropdown value changes
     $('#clone-type').change(function() {
         var selection = $(this).val();
@@ -18,6 +18,12 @@ jQuery(document).ready(function($) {
         var repoName = $(this).data('repo-name');
         console.log("Repo Name:", repoName);
 
+        console.log({
+            action: 'wp_github_clone_pull',
+            repo: repoName,
+            nonce: wpGithubClone.nonce
+        });
+        
         // Send AJAX request to WordPress to initiate the git pull
         $.ajax({
             type: 'POST',
@@ -44,6 +50,7 @@ jQuery(document).ready(function($) {
 
     // Event listener for the Delete button
     $(document).on('click', '.delete-repo', function(e) {
+        console.log("Delete button clicked for repo:", $(this).data('repo-name'));
         e.preventDefault();
 
         if (!confirm('Are you sure you want to delete this repository? This action cannot be undone.')) {
@@ -58,7 +65,7 @@ jQuery(document).ready(function($) {
             type: 'POST',
             url: wpGithubClone.ajax_url,
             data: {
-                action: 'wp_github_clone_delete',
+                action: 'test_github_clone_delete',
                 repo: repoName,
                 nonce: wpGithubClone.nonce
             },
@@ -84,12 +91,6 @@ jQuery(document).ready(function($) {
         var cloneType = $('#clone-type').val();
         var githubUrl = $('#github-url').val();
         var githubPat = $('#github-pat').val();
-
-        console.log("Clone Type: ", cloneType);
-        console.log("GitHub URL: ", githubUrl);
-        console.log("GitHub PAT: ", githubPat);
-        console.log("AJAX URL: ", wpGithubClone.ajax_url);
-        console.log("Nonce: ", wpGithubClone.nonce);
 
         $.ajax({
             type: 'POST',
@@ -128,7 +129,19 @@ jQuery(document).ready(function($) {
                 alert('An unexpected error occurred. Check the console for more details.');
             }
         });
+        console.log("AJAX URL:", wpGithubClone.ajax_url);
+
     });
+
+    document.querySelector('input[name="repo_visibility"]').addEventListener('change', function() {
+        var patField = document.querySelector('#PAT_FIELD_ID'); // Replace with the actual ID of your PAT input field
+        if (this.value === 'private') {
+            patField.required = true;
+        } else {
+            patField.required = false;
+        }
+    });
+    
 
     $('.nav-tab').click(function(e) {
         e.preventDefault();
@@ -140,4 +153,27 @@ jQuery(document).ready(function($) {
         $($(this).attr('href')).show();
     });
 
+     // When the type dropdown changes
+     $('#clone-type').on('change', function() {
+        if ($(this).val() === 'theme' || $(this).val() === 'plugin') {
+            $('#github-privacy-wrapper').css('display', 'flex');
+            $('#github-url-wrapper, #github-pat-wrapper, #github-button-wrapper').hide();
+        } else {
+            $('.github-privacy-wrapper, #github-url-wrapper, #github-pat-wrapper, #github-button-wrapper').hide();
+        }
+    });
+
+    // When the privacy radio buttons change
+    $('input[name="repo_visibility"]').on('change', function() {
+        if ($(this).val() === 'public' || $(this).val() === 'private') {
+            $('#github-url-wrapper, #github-button-wrapper').css('display', 'flex');
+            if ($(this).val() === 'private') {
+                $('#github-pat-wrapper').css('display', 'flex');
+            } else {
+                $('#github-pat-wrapper').hide();
+            }
+        } else {
+            $('#github-url-wrapper, #github-pat-wrapper, #github-button-wrapper').hide();
+        }
+    });
 });
