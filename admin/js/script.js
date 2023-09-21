@@ -173,6 +173,16 @@ jQuery(document).ready(function($) {
 
     });
 
+    document.querySelector('input[name="repo_visibility"]').addEventListener('change', function() {
+        var patField = document.querySelector('#PAT_FIELD_ID'); // Replace with the actual ID of your PAT input field
+        if (this.value === 'private') {
+            patField.required = true;
+        } else {
+            patField.required = false;
+        }
+    });
+    
+
     $('.nav-tab').click(function(e) {
         e.preventDefault();
 

@@ -43,6 +43,12 @@ $cloned_repositories = get_cloned_repositories();
             <option value="theme">Theme</option>
             <option value="plugin">Plugin</option>
         </select>
+        <label>
+            <input type="radio" name="repo_visibility" value="public" checked> Public
+        </label>
+        <label>
+            <input type="radio" name="repo_visibility" value="private"> Private
+        </label>
 
         <br><br>
         <div id="github-url-wrapper">

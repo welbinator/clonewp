@@ -192,29 +192,35 @@ function wp_github_clone_ajax() {
 
     $github_url = isset($_POST['github-url']) ? sanitize_text_field($_POST['github-url']) : '';
     $pat = isset($_POST['github-pat']) ? sanitize_text_field($_POST['github-pat']) : '';
+    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'theme';
+    $repo_access_type = isset($_POST['repo-access-type']) ? sanitize_text_field($_POST['repo-access-type']) : 'public';
 
-    if(empty($github_url) || empty($pat)) {
+    if (empty($github_url)) {
         wp_send_json(array(
             'success' => false,
-            'message' => "Missing GitHub URL or PAT.",
+            'message' => "Missing GitHub URL.",
         ));
         return;
     }
 
-    // Use the clone_github_repo function to handle the cloning
-    $type = isset($_POST['type']) ? sanitize_text_field($_POST['type']) : 'theme';
+    if ($repo_access_type === 'private' && empty($pat)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Missing Personal Access Token for a private repository.",
+        ));
+        return;
+    }
 
     // Decide the destination directory based on type
     $destination_directory = WP_CONTENT_DIR . '/themes'; // Default to themes
     if ($type === 'plugin') {
         $destination_directory = WP_CONTENT_DIR . '/plugins';
     }
-    error_log("Repo type before calling clone_github_repo: {$type}");
-    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type);
-    
-    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type);
 
-    if($clone_result['success']) {
+    $clone_result = clone_github_repo($github_url, $pat, $destination_directory, $type, $access_type);
+
+
+    if ($clone_result['success']) {
         wp_send_json(array(
             'success' => true,
             'message' => "Successfully cloned {$github_url}",
@@ -226,6 +232,9 @@ function wp_github_clone_ajax() {
         ));
     }
 }
+
+add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
+
 
 add_action('wp_ajax_wp_github_clone_ajax', 'wp_github_clone_ajax');
 
@@ -257,8 +266,12 @@ function wp_github_clone_nvm_install() {
         return;
     }
 
+    // Set up the environment variables
+    putenv("NVM_DIR=/path/to/your/nvm");  // Replace with the path to your NVM directory
+    putenv("HOME=/path/to/your/home");    // Replace with the path to your home directory
+
     // Execute the nvm install command
-    $output = shell_exec("cd {$repo_path} && nvm install 2>&1");
+    $output = shell_exec("cd {$repo_path} && source ~/.nvm/nvm.sh && nvm install 2>&1");
 
     if (strpos($output, 'Now using node') !== false) {
         wp_send_json(array(
@@ -275,6 +288,7 @@ function wp_github_clone_nvm_install() {
     }
 }
 add_action('wp_ajax_wp_github_clone_nvm_install', 'wp_github_clone_nvm_install');
+
 
 // AJAX handler for the composer install action
 function wp_github_clone_composer_install() {
@@ -304,6 +318,9 @@ function wp_github_clone_composer_install() {
         return;
     }
 
+    // Set the COMPOSER_HOME environment variable
+    putenv('COMPOSER_HOME=' . sys_get_temp_dir() . '/composer_home');
+
     // Execute the composer install command
     $output = shell_exec("cd {$repo_path} && composer install 2>&1");
 
@@ -322,6 +339,7 @@ function wp_github_clone_composer_install() {
     }
 }
 add_action('wp_ajax_wp_github_clone_composer_install', 'wp_github_clone_composer_install');
+
 
 
 
