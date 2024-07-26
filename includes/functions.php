@@ -9,7 +9,6 @@
  * @return array                       An array containing success status and a message.
  */
 function clone_github_repo($github_url, $pat, $destination_directory, $repo_type, $repo_access_type) {
-
     // Validate the GitHub URL
     if (!is_valid_github_url($github_url)) {
         return array(
@@ -20,8 +19,9 @@ function clone_github_repo($github_url, $pat, $destination_directory, $repo_type
 
     // Extract the repo name from the GitHub URL
     $parts = explode('/', rtrim($github_url, '/'));
-    $repo_name = end($parts);
-    
+    $repo_name_with_git = end($parts);
+    $repo_name = preg_replace('/\.git$/', '', $repo_name_with_git); // Remove .git suffix if present
+
     $full_destination_path = rtrim($destination_directory, '/') . '/' . $repo_name;
 
     // Check if the directory already exists
@@ -32,11 +32,21 @@ function clone_github_repo($github_url, $pat, $destination_directory, $repo_type
         );
     }
 
+    // Add PAT to the URL if the repository is private
+    if ($repo_access_type === 'private' && !empty($pat)) {
+        // Construct the URL with the PAT
+        $parsed_url = parse_url($github_url);
+        $github_url = $parsed_url['scheme'] . '://' . urlencode($pat) . ':x-oauth-basic@' . $parsed_url['host'] . $parsed_url['path'];
+    }
+
+    // Construct the git clone command
+    $command = "git clone {$github_url} {$full_destination_path} 2>&1";
+
     // Run the git clone command
     putenv("GIT_TERMINAL_PROMPT=0"); // This prevents git from asking for credentials
     putenv("GIT_SSL_NO_VERIFY=true"); // Bypass SSL verification, might not be needed based on your setup
 
-    $output = shell_exec("git clone {$github_url} {$full_destination_path} 2>&1");
+    $output = shell_exec($command);
 
     // If the clone was successful
     if (strpos($output, 'Checking out files') !== false || strpos($output, 'Cloning into') !== false) {
@@ -143,13 +153,14 @@ function wp_github_clone_log($message) {
         }
     }
 
-    $log_file = get_theme_root() . "/github-clone-log.txt";
+    $log_file = WP_CONTENT_DIR . "/github-clone-log.txt";
 
     if ($handle = fopen($log_file, 'a')) {
         fwrite($handle, date('Y-m-d H:i:s') . " " . $message . "\n");
         fclose($handle);
     }
 }
+
 
 function get_cloned_repositories() {
     $repos = [];
@@ -183,27 +194,29 @@ function get_cloned_repositories() {
 
 //clone ajax handler
 function wp_github_clone_ajax_handler() {
-    
     check_ajax_referer('wp_github_clone_nonce', 'nonce');
     
+    $github_url = isset($_POST['github_url']) ? sanitize_text_field($_POST['github_url']) : '';
+    $pat = isset($_POST['github_pat']) ? sanitize_text_field($_POST['github_pat']) : '';
     $type = isset($_POST['clone_type']) ? sanitize_text_field($_POST['clone_type']) : 'theme';
-    $repo_access_type = isset($_POST['clone_access_type']) ? sanitize_text_field($_POST['clone_access_type']) : 'public'; // Added this line
+    $repo_access_type = isset($_POST['repo_visibility']) ? sanitize_text_field($_POST['repo_visibility']) : 'public';
     
     error_log('type is ' . $type);
+    error_log('repo_access_type is ' . $repo_access_type);
     
     // Determine the correct destination directory based on the type
     $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
     
-    if (isset($_POST['github_url']) && isset($_POST['github_pat'])) {
-        $response = clone_github_repo($_POST['github_url'], $_POST['github_pat'], $destination_dir, $type, $repo_access_type); // Changed $access_type to $repo_access_type
+    if (!empty($github_url) && ($repo_access_type !== 'private' || !empty($pat))) {
+        $response = clone_github_repo($github_url, $pat, $destination_dir, $type, $repo_access_type);
         wp_send_json($response);
     } else {
         wp_send_json_error(array('message' => 'Missing GitHub URL or PAT.'));
     }
 }
-
-
 add_action('wp_ajax_wp_github_clone', 'wp_github_clone_ajax_handler');
+
+
 
 // pull ajax handler
 function wp_github_clone_pull_ajax_handler() {
