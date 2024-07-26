@@ -35,10 +35,12 @@ function wp_github_clone_enqueue_scripts($hook) {
     wp_enqueue_script('wp-github-clone-script', plugin_dir_url(__FILE__) . 'admin/js/script.js', array('jquery'), '1.0.0', true);
     wp_localize_script('wp-github-clone-script', 'wpGithubClone', array(
         'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('wp_github_clone_nonce')
+        'nonce' => wp_create_nonce('wp_github_clone_nonce'),
+        'manual_pull_nonce' => wp_create_nonce('wp_github_clone_manual_pull')
     ));
 }
 add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_scripts');
+
 
 // enqueue styles
 function wp_github_clone_enqueue_admin_styles($hook) {

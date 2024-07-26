@@ -35,7 +35,7 @@ function clone_github_repo($github_url, $pat, $destination_directory, $repo_type
     // Add PAT to the URL if the repository is private
     if ($repo_access_type === 'private' && !empty($pat)) {
         // Construct the URL with the PAT
-        $parsed_url = parse_url($github_url);
+        $parsed_url = wp_parse_url($github_url);
         $github_url = $parsed_url['scheme'] . '://' . urlencode($pat) . ':x-oauth-basic@' . $parsed_url['host'] . $parsed_url['path'];
     }
 
@@ -145,21 +145,35 @@ function delete_local_repo($local_path) {
 }
 
 function wp_github_clone_log($message) {
-    if (WP_DEBUG === true) {
-        if (is_array($message) || is_object($message)) {
-            error_log(print_r($message, true));
-        } else {
-            error_log($message);
-        }
+    global $wp_filesystem;
+
+    // Initialize the WordPress filesystem, no need to check for privileges
+    if (empty($wp_filesystem)) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        WP_Filesystem();
     }
 
+    // Prepare the message
+    if (is_array($message) || is_object($message)) {
+        $message = print_r($message, true);
+    }
+    
+    $message = gmdate('Y-m-d H:i:s') . " " . $message . "\n";
+
+    // Define the log file path
     $log_file = WP_CONTENT_DIR . "/github-clone-log.txt";
 
-    if ($handle = fopen($log_file, 'a')) {
-        fwrite($handle, date('Y-m-d H:i:s') . " " . $message . "\n");
-        fclose($handle);
+    // Check if the file exists, if not create it
+    if (!$wp_filesystem->exists($log_file)) {
+        $wp_filesystem->put_contents($log_file, $message, FS_CHMOD_FILE);
+    } else {
+        // Append the message to the log file
+        $existing_content = $wp_filesystem->get_contents($log_file);
+        $new_content = $existing_content . $message;
+        $wp_filesystem->put_contents($log_file, $new_content, FS_CHMOD_FILE);
     }
 }
+
 
 
 function get_cloned_repositories() {
@@ -220,7 +234,7 @@ add_action('wp_ajax_wp_github_clone', 'wp_github_clone_ajax_handler');
 
 // pull ajax handler
 function wp_github_clone_pull_ajax_handler() {
-    check_ajax_referer('wp_github_clone_nonce', 'nonce');
+    check_ajax_referer('wp_github_clone_manual_pull', 'nonce');
 
     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         wp_send_json_error(array('message' => 'Missing repository name.'));
@@ -238,8 +252,8 @@ function wp_github_clone_pull_ajax_handler() {
     $response = pull_repo_changes($local_path);
     wp_send_json($response);
 }
-
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull_ajax_handler');
+
 
 // delete ajax handler
 function wp_github_clone_delete_ajax_handler() {
@@ -260,11 +274,13 @@ add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete_ajax_handle
 
 
 add_action('init', function() {
-    if (isset($_GET['manual_pull'])) {
+    if (isset($_GET['manual_pull']) && isset($_GET['_wpnonce']) && wp_verify_nonce($_GET['_wpnonce'], 'wp_github_clone_manual_pull')) {
         wp_github_clone_pull();
         exit;
     }
 });
+
+
 
 function display_repo_access_type($atts) {
     $repo_name = $atts['repo_name'];

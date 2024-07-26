@@ -15,13 +15,6 @@ jQuery(document).ready(function($) {
         e.preventDefault();
 
         var repoName = $(this).data('repo-name');
-        console.log("Repo Name:", repoName);
-
-        console.log({
-            action: 'wp_github_clone_pull',
-            repo: repoName,
-            nonce: wpGithubClone.nonce
-        });
         
         // Send AJAX request to WordPress to initiate the git pull
         $.ajax({
@@ -30,10 +23,9 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'wp_github_clone_pull',
                 repo: repoName,
-                nonce: wpGithubClone.nonce
+                nonce: wpGithubClone.manual_pull_nonce // Use the localized nonce
             },
             success: function(response) {
-                console.log(response); // Log the full response
                 if (response.success) {
                     alert(response.message + "\n\nDetails:\n" + response.details);
                 } else {
