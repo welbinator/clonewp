@@ -1,5 +1,4 @@
 jQuery(document).ready(function($) {
-    
     // When the dropdown value changes
     $('#clone-type').change(function() {
         var selection = $(this).val();
@@ -91,6 +90,7 @@ jQuery(document).ready(function($) {
         var cloneType = $('#clone-type').val();
         var githubUrl = $('#github-url').val();
         var githubPat = $('#github-pat').val();
+        var repoVisibility = $('input[name="repo_visibility"]:checked').val();
 
         $.ajax({
             type: 'POST',
@@ -100,6 +100,7 @@ jQuery(document).ready(function($) {
                 clone_type: cloneType, // sending the selected type (theme or plugin)
                 github_url: githubUrl,
                 github_pat: githubPat,
+                repo_visibility: repoVisibility, // sending the visibility (public or private)
                 nonce: wpGithubClone.nonce
             },
             success: function(response) {
@@ -134,7 +135,7 @@ jQuery(document).ready(function($) {
     });
 
     document.querySelector('input[name="repo_visibility"]').addEventListener('change', function() {
-        var patField = document.querySelector('#PAT_FIELD_ID'); // Replace with the actual ID of your PAT input field
+        var patField = document.querySelector('#github-pat'); // Corrected ID of your PAT input field
         if (this.value === 'private') {
             patField.required = true;
         } else {

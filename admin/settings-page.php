@@ -35,41 +35,40 @@
         <?php endif; ?>
 
         <form method="post" id="github-clone-form">
-            <?php wp_nonce_field('wp_github_clone_nonce'); ?>
+    <?php wp_nonce_field('wp_github_clone_nonce'); ?>
 
-            <div class="github-type-wrapper">
-                <label for="clone-type">Type:</label>
-                <select id="clone-type" name="clone-type">
-                <option value="select" selected>Make a selection</option>
-                <option value="theme">Theme</option>
-                <option value="plugin">Plugin</option>
-                </select>
-            </div><!-- github-type-wrapper -->
-            <div id="github-privacy-wrapper">
-                <label>
-                <input type="radio" name="repo_visibility" value="public"> Public
-                </label>
-                <label>
-                <input type="radio" name="repo_visibility" value="private"> Private
-                </label>
-            </div><!-- github-privacy-wrapper -->
+    <div class="github-type-wrapper">
+        <label for="clone-type">Type:</label>
+        <select id="clone-type" name="clone-type">
+            <option value="select" selected>Make a selection</option>
+            <option value="theme">Theme</option>
+            <option value="plugin">Plugin</option>
+        </select>
+    </div><!-- github-type-wrapper -->
+    <div id="github-privacy-wrapper">
+        <label>
+            <input type="radio" name="repo_visibility" value="public"> Public
+        </label>
+        <label>
+            <input type="radio" name="repo_visibility" value="private"> Private
+        </label>
+    </div><!-- github-privacy-wrapper -->
 
-            <div id="github-url-wrapper">
-                <label for="github-url"><strong>GitHub Repository URL:</strong></label>
-                <input type="text" id="github-url" name="github-url">
-            </div>
+    <div id="github-url-wrapper">
+        <label for="github-url"><strong>GitHub Repository URL:</strong></label>
+        <input type="text" id="github-url" name="github-url">
+    </div>
 
+    <div id="github-pat-wrapper">
+        <label for="github-pat"><strong>GitHub Personal Access Token:</strong></label>
+        <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
+    </div>
 
-            <div id="github-pat-wrapper">
-                <label for="github-pat"><strong>GitHub Personal Access Token:</strong></label>
-                <input type="password" id="github-pat" name="github-pat"> <!-- Use password type to hide token from view -->
-            </div>
+    <div id="github-button-wrapper">
+        <input type="submit" value="Clone Repository" class="button-primary" id="clone-button">
+    </div>
+</form>
 
-
-            <div id="github-button-wrapper">
-                <input type="submit" value="Clone Repository" class="button-primary" id="clone-button">
-            </div>
-        </form>
     </div><!-- tab-content -->
 
     <div class="tab-content" id="tab-repos" style="display:none;">
