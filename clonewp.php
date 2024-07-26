@@ -1,13 +1,13 @@
 <?php
 /*
-Plugin Name: WP GitHub Clone
+Plugin Name: CloneWP
 Plugin URI: https://yourwebsite.com/plugin
 Description: A plugin to clone and display GitHub repositories.
 Version: 1.0.0
 Author: Your Name
 Author URI: https://yourwebsite.com/
 License: GPL2
-Text Domain: wp-github-clone
+Text Domain: clonewp
 */
 
 // Exit if accessed directly.
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once plugin_dir_path(__FILE__) . 'includes/class-wp-github-clone.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-clonewp.php';
 require_once plugin_dir_path(__FILE__) . 'includes/functions.php';
 require_once plugin_dir_path(__FILE__) . 'includes/helpers.php';
 
@@ -28,33 +28,40 @@ run_wp_github_clone();
 
 // enqueue scripts
 function wp_github_clone_enqueue_scripts($hook) {
-    if ($hook != 'settings_page_wp-github-clone') {
+    if ($hook != 'settings_page_clonewp') {
         return;
     }
 
-    wp_enqueue_script('wp-github-clone-script', plugin_dir_url(__FILE__) . 'admin/js/script.js', array('jquery'), '1.0.0', true);
-    wp_localize_script('wp-github-clone-script', 'wpGithubClone', array(
+    wp_enqueue_script('clonewp-script', plugin_dir_url(__FILE__) . 'admin/js/script.js', array('jquery'), '1.0.0', true);
+    wp_localize_script('clonewp-script', 'wpGithubClone', array(
         'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('wp_github_clone_nonce')
+        'nonce' => wp_create_nonce('wp_github_clone_nonce'),
+        'manual_pull_nonce' => wp_create_nonce('wp_github_clone_manual_pull')
     ));
 }
 add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_scripts');
 
+
 // enqueue styles
 function wp_github_clone_enqueue_admin_styles($hook) {
-    if ($hook != 'settings_page_wp-github-clone') {
+    if ($hook != 'settings_page_clonewp') {
         return;
     }
 
-    wp_enqueue_style('wp-github-clone-admin-style', plugin_dir_url(__FILE__) . 'admin/css/style.css', array(), '1.0.0');
+    wp_enqueue_style('clonewp-admin-style', plugin_dir_url(__FILE__) . 'admin/css/style.css', array(), '1.0.0');
 }
 add_action('admin_enqueue_scripts', 'wp_github_clone_enqueue_admin_styles');
 
 // AJAX handler for the Pull action
 function wp_github_clone_pull() {
-    error_log("POST data: " . print_r($_POST, true));
-
-    check_ajax_referer('wp_github_clone_nonce', 'nonce');
+    // Verifies nonce
+    if (!check_ajax_referer('wp_github_clone_manual_pull', 'nonce', false)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => 'Nonce verification failed.'
+        ));
+        return;
+    }
 
     if (!isset($_POST['repo']) || empty($_POST['repo'])) {
         wp_send_json(array(
@@ -72,8 +79,6 @@ function wp_github_clone_pull() {
     // Determine the path based on the repository type
     $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
 
-    error_log("Checking repo path: " . $repo_path);
-    
     if (is_dir($repo_path)) {
         // Execute git pull for the repository
         chdir($repo_path);
@@ -84,15 +89,12 @@ function wp_github_clone_pull() {
             'details' => $output
         ));
     } else {
-        error_log("Directory not found in {$repo_type}s for repo: " . $repo_name);
         wp_send_json(array(
             'success' => false,
             'message' => "Failed to pull {$repo_name}. Directory not found in {$repo_type}s." // 'themes' or 'plugins'
         ));
     }
 }
-
-
 
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull');
 
@@ -102,7 +104,7 @@ function wp_github_clone_admin_notices() {
     if (get_transient('wp_github_clone_pull_success')) {
         ?>
         <div class="notice notice-success is-dismissible">
-            <p><?php _e('Successfully pulled from GitHub', 'wp-github-clone'); ?></p>
+            <p><?php _e('Successfully pulled from GitHub', 'clonewp'); ?></p>
         </div>
         <?php
         delete_transient('wp_github_clone_pull_success'); // Delete the transient to ensure it only shows once
@@ -155,31 +157,40 @@ add_action('wp_ajax_wp_github_clone_delete', 'wp_github_clone_delete');
 
 // New rrmdir function
 function rrmdir($dir) {
-    if (!is_dir($dir)) {
+    global $wp_filesystem;
+
+    // Initialize the WordPress filesystem
+    if (empty($wp_filesystem)) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        WP_Filesystem();
+    }
+
+    if (!$wp_filesystem->is_dir($dir)) {
         return;
     }
 
-    $it = new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS);
-    $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+    $files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
 
-    foreach ($files as $file) {
-        if ($file->isDir()) {
-            if (!rmdir($file->getRealPath())) {
-                error_log("Failed to delete directory: " . $file->getRealPath());
+    foreach ($files as $fileinfo) {
+        $filepath = $fileinfo->getRealPath();
+        if ($fileinfo->isDir()) {
+            if (!$wp_filesystem->rmdir($filepath)) {
+                error_log("Failed to delete directory: " . $filepath);
             }
         } else {
-            if (!unlink($file->getRealPath())) {
-                error_log("Failed to delete file: " . $file->getRealPath());
+            if (!$wp_filesystem->delete($filepath)) {
+                error_log("Failed to delete file: " . $filepath);
             }
         }
     }
 
-    if (!rmdir($dir)) {
+    if (!$wp_filesystem->rmdir($dir)) {
         error_log("Failed to delete main directory: " . $dir);
     }
 }
-
-
 
 
 add_action('wp_ajax_test_github_clone_delete', 'wp_github_clone_delete');
