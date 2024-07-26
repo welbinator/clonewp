@@ -23,7 +23,7 @@ if (!class_exists('WP_GitHub_Clone')) {
                 'WP GitHub Clone Settings',
                 'WP GitHub Clone',
                 'manage_options',
-                'wp-github-clone',
+                'clonewp',
                 array($this, 'display_settings_page')
             );
         }

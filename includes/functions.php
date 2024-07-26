@@ -188,7 +188,7 @@ function get_cloned_repositories() {
     foreach ($directories as $directory) {
         if ($handle = opendir($directory)) {
             while (false !== ($entry = readdir($handle))) {
-                if ($entry != "." && $entry != ".." && $entry != "wp-github-clone" && is_dir($directory . '/' . $entry) && is_dir($directory . '/' . $entry . '/.git')) {
+                if ($entry != "." && $entry != ".." && $entry != "clonewp" && is_dir($directory . '/' . $entry) && is_dir($directory . '/' . $entry . '/.git')) {
                     $repos[] = $entry;
                 }
                 
