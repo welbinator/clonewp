@@ -50,10 +50,10 @@ function clone_github_repo($github_url, $pat, $destination_directory, $repo_type
 
     // If the clone was successful
     if (strpos($output, 'Checking out files') !== false || strpos($output, 'Cloning into') !== false) {
-        // Store the repository access type in the database
-        update_option("wp_github_clone_repo_type_{$repo_name}", $repo_type);
+        // Store the repository type and access type
+        update_option("wp_github_clone_type_{$repo_name}", $repo_type); // Ensure this is always saved
         update_option("wp_github_clone_access_type_{$repo_name}", $repo_access_type);
-        
+
         // If the repo is private, store the PAT
         if ($repo_access_type === 'private' && $pat) {
             update_option("wp_github_clone_token_{$repo_name}", $pat);
@@ -72,6 +72,7 @@ function clone_github_repo($github_url, $pat, $destination_directory, $repo_type
         );
     }
 }
+
 
 
 
@@ -244,14 +245,46 @@ function wp_github_clone_pull_ajax_handler() {
     $repo_name = sanitize_text_field($_POST['repo']);
 
     // Retrieve the repository type from the database
-    $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme'); // Default to 'theme' if not found
+    $repo_type = get_option("wp_github_clone_type_{$repo_name}", null);
 
+    // Fallback to checking the directory if the type is not found or invalid
+    if (!$repo_type || ($repo_type !== 'plugin' && $repo_type !== 'theme')) {
+        if (is_dir(WP_CONTENT_DIR . "/plugins/{$repo_name}")) {
+            $repo_type = 'plugin';
+        } elseif (is_dir(WP_CONTENT_DIR . "/themes/{$repo_name}")) {
+            $repo_type = 'theme';
+        } else {
+            error_log("Could not determine type for repository: {$repo_name}");
+            wp_send_json_error(array('message' => "Could not determine type for repository: {$repo_name}."));
+            return;
+        }
+    }
+
+    error_log("Repository name: {$repo_name}");
+    error_log("Retrieved or fallback type: {$repo_type}");
+    
     // Determine the path based on the repository type
     $local_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
 
-    $response = pull_repo_changes($local_path);
-    wp_send_json($response);
+    // Check if the directory exists
+    if (!is_dir($local_path)) {
+        error_log("Directory not found: {$local_path}");
+        wp_send_json_error(array('message' => "Failed to pull changes. Directory does not exist."));
+        return;
+    }
+
+    // Execute the git pull command
+    $output = shell_exec("cd {$local_path} && git pull 2>&1");
+    error_log("Git pull output for {$repo_name}: {$output}");
+
+    // Determine success or failure based on the output
+    if (strpos($output, 'Already up to date.') !== false || strpos($output, 'Fast-forward') !== false) {
+        wp_send_json_success(array('message' => "Successfully pulled changes for {$repo_name}.", 'details' => $output));
+    } else {
+        wp_send_json_error(array('message' => "Failed to pull changes for {$repo_name}.", 'details' => $output));
+    }
 }
+
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull_ajax_handler');
 
 

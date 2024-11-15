@@ -11,33 +11,37 @@ jQuery(document).ready(function($) {
     });
 
     // Event listener for the Pull button
-    $(document).on('click', '.pull-repo', function(e) {
-        e.preventDefault();
+$(document).on('click', '.pull-repo', function (e) {
+    e.preventDefault();
 
-        var repoName = $(this).data('repo-name');
-        
-        // Send AJAX request to WordPress to initiate the git pull
-        $.ajax({
-            type: 'POST',
-            url: wpGithubClone.ajax_url,
-            data: {
-                action: 'wp_github_clone_pull',
-                repo: repoName,
-                nonce: wpGithubClone.manual_pull_nonce // Use the localized nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    alert(response.message + "\n\nDetails:\n" + response.details);
-                } else {
-                    alert(response.message + "\n\nError Details:\n" + response.details);
-                }
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Request failed: " + textStatus + " - " + errorThrown);
-                alert('An unexpected error occurred. Check the console for more details.');
+    var repoName = $(this).data('repo-name');
+
+    // Send AJAX request to WordPress to initiate the git pull
+    $.ajax({
+        type: 'POST',
+        url: wpGithubClone.ajax_url,
+        data: {
+            action: 'wp_github_clone_pull',
+            repo: repoName,
+            nonce: wpGithubClone.manual_pull_nonce // Use the localized nonce
+        },
+        success: function (response) {
+            console.log(response); // Debug the response structure
+
+            if (response.success) {
+                // Accessing message and details under response.data
+                alert("Success: " + response.data.message + "\n\nDetails:\n" + response.data.details);
+            } else {
+                alert("Error: " + response.data.message + "\n\nDetails:\n" + response.data.details);
             }
-        });
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.error("Request failed: " + textStatus + " - " + errorThrown);
+            alert("An unexpected error occurred. Check the console for more details.");
+        }
     });
+});
+
 
     // Event listener for the Delete button
     $(document).on('click', '.delete-repo', function(e) {
