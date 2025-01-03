@@ -175,39 +175,90 @@ jQuery(document).ready(function($) {
     });
 
     // Event listener for the Switch button
-$(document).on('click', '.switch-branch', function (e) {
-    e.preventDefault();
+    $(document).on('click', '.switch-branch', function (e) {
+        e.preventDefault();
 
-    var repoName = $(this).data('repo-name');
-    var branchName = $(this).siblings('.branch-dropdown').val();
+        var repoName = $(this).data('repo-name');
+        var branchName = $(this).siblings('.branch-dropdown').val();
 
-    // Send AJAX request to switch branch
-    $.ajax({
-        type: 'POST',
-        url: wpGithubClone.ajax_url,
-        data: {
-            action: 'wp_github_clone_switch_branch',
-            repo: repoName,
-            branch: branchName,
-            nonce: wpGithubClone.nonce
-        },
-        success: function (response) {
-            console.log('Switch Branch Response:', response); // Debug response structure
-            if (response.success) {
-                alert("Successfully switched to branch " + branchName); // Show success message
-                $(this).closest('li').find('.current-branch').text(branchName); // Update displayed branch
-            } else if (response.details) {
-                alert("Error: " + response.message + "\n\nDetails:\n" + response.details); // Show detailed error message
-            } else {
-                alert("An error occurred while switching the branch. No additional details available.");
+        // Send AJAX request to switch branch
+        $.ajax({
+            type: 'POST',
+            url: wpGithubClone.ajax_url,
+            data: {
+                action: 'wp_github_clone_switch_branch',
+                repo: repoName,
+                branch: branchName,
+                nonce: wpGithubClone.nonce
+            },
+            success: function (response) {
+                console.log('Switch Branch Response:', response); // Debug response structure
+                if (response.success) {
+                    alert("Successfully switched to branch " + branchName); // Show success message
+                    $(this).closest('li').find('.current-branch').text(branchName); // Update displayed branch
+                } else if (response.details) {
+                    alert("Error: " + response.message + "\n\nDetails:\n" + response.details); // Show detailed error message
+                } else {
+                    alert("An error occurred while switching the branch. No additional details available.");
+                }
+            }.bind(this),
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert("An unexpected error occurred. Check the console for more details.");
             }
-        }.bind(this),
-        error: function (jqXHR, textStatus, errorThrown) {
-            console.error("Request failed: " + textStatus + " - " + errorThrown);
-            alert("An unexpected error occurred. Check the console for more details.");
-        }
-    }); 
+        }); 
+        
+    });
+
+    $(document).on('click', '.fetch-all', function (e) {
+        e.preventDefault();
     
-});
+        var repoName = $(this).data('repo-name');
+    
+        // Send AJAX request to fetch all branches
+        $.ajax({
+            type: 'POST',
+            url: wpGithubClone.ajax_url,
+            data: {
+                action: 'wp_github_clone_fetch_all',
+                repo: repoName,
+                nonce: wpGithubClone.nonce
+            },
+            success: function (response) {
+                console.log('Fetch All Response:', response);
+    
+                if (response.success) {
+                    alert(response.data.message); // Display success message
+    
+                    // Dynamically update the branch dropdown
+                    if (response.data.localBranches) {
+                        updateBranchDropdown(repoName, response.data.localBranches);
+                    }
+                    if (response.data.trackingErrors && response.data.trackingErrors.length > 0) {
+                        console.warn('Tracking Errors:', response.data.trackingErrors);
+                    }
+                } else {
+                    console.error('Unexpected response structure:', response);
+                    alert("Failed to update branches. Check the console for details.");
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error("Fetch All Request failed: " + textStatus + " - " + errorThrown);
+                alert("An unexpected error occurred. Check the console for more details.");
+            }
+        });
+    });
+    
+    function updateBranchDropdown(repoName, branches) {
+        var branchDropdown = $('.branch-dropdown[data-repo-name="' + repoName + '"]');
+        branchDropdown.empty(); // Clear existing options
+    
+        // Add new branches
+        $.each(branches, function (index, branch) {
+            // Remove the "*" indicator from the current branch
+            branchDropdown.append('<option value="' + branch.replace(/^\* /, '') + '">' + branch + '</option>');
+        });
+    }  
+    
 
 });
