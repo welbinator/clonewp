@@ -11,36 +11,36 @@ jQuery(document).ready(function($) {
     });
 
     // Event listener for the Pull button
-$(document).on('click', '.pull-repo', function (e) {
-    e.preventDefault();
+    $(document).on('click', '.pull-repo', function (e) {
+        e.preventDefault();
 
-    var repoName = $(this).data('repo-name');
+        var repoName = $(this).data('repo-name');
 
-    // Send AJAX request to WordPress to initiate the git pull
-    $.ajax({
-        type: 'POST',
-        url: wpGithubClone.ajax_url,
-        data: {
-            action: 'wp_github_clone_pull',
-            repo: repoName,
-            nonce: wpGithubClone.manual_pull_nonce // Use the localized nonce
-        },
-        success: function (response) {
-            console.log(response); // Debug the response structure
+        // Send AJAX request to WordPress to initiate the git pull
+        $.ajax({
+            type: 'POST',
+            url: wpGithubClone.ajax_url,
+            data: {
+                action: 'wp_github_clone_pull',
+                repo: repoName,
+                nonce: wpGithubClone.manual_pull_nonce // Use the localized nonce
+            },
+            success: function (response) {
+                console.log(response); // Debug the response structure
 
-            if (response.success) {
-                // Accessing message and details under response.data
-                alert("Success: " + response.data.message + "\n\nDetails:\n" + response.data.details);
-            } else {
-                alert("Error: " + response.data.message + "\n\nDetails:\n" + response.data.details);
+                if (response.success) {
+                    // Accessing message and details under response.data
+                    alert("Success: " + response.data.message + "\n\nDetails:\n" + response.data.details);
+                } else {
+                    alert("Error: " + response.data.message + "\n\nDetails:\n" + response.data.details);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error("Request failed: " + textStatus + " - " + errorThrown);
+                alert("An unexpected error occurred. Check the console for more details.");
             }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            console.error("Request failed: " + textStatus + " - " + errorThrown);
-            alert("An unexpected error occurred. Check the console for more details.");
-        }
+        });
     });
-});
 
 
     // Event listener for the Delete button
@@ -173,4 +173,41 @@ $(document).on('click', '.pull-repo', function (e) {
             $('#github-url-wrapper, #github-pat-wrapper, #github-button-wrapper').hide();
         }
     });
+
+    // Event listener for the Switch button
+$(document).on('click', '.switch-branch', function (e) {
+    e.preventDefault();
+
+    var repoName = $(this).data('repo-name');
+    var branchName = $(this).siblings('.branch-dropdown').val();
+
+    // Send AJAX request to switch branch
+    $.ajax({
+        type: 'POST',
+        url: wpGithubClone.ajax_url,
+        data: {
+            action: 'wp_github_clone_switch_branch',
+            repo: repoName,
+            branch: branchName,
+            nonce: wpGithubClone.nonce
+        },
+        success: function (response) {
+            console.log('Switch Branch Response:', response); // Debug response structure
+            if (response.success) {
+                alert("Successfully switched to branch " + branchName); // Show success message
+                $(this).closest('li').find('.current-branch').text(branchName); // Update displayed branch
+            } else if (response.details) {
+                alert("Error: " + response.message + "\n\nDetails:\n" + response.details); // Show detailed error message
+            } else {
+                alert("An error occurred while switching the branch. No additional details available.");
+            }
+        }.bind(this),
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.error("Request failed: " + textStatus + " - " + errorThrown);
+            alert("An unexpected error occurred. Check the console for more details.");
+        }
+    }); 
+    
+});
+
 });

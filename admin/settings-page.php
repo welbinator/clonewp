@@ -72,20 +72,35 @@
     </div><!-- tab-content -->
 
     <div class="tab-content" id="tab-repos" style="display:none;">
-        <!-- Display list of cloned repositories with Pull and Delete buttons -->
-        <?php if (!empty($cloned_repositories)): ?>
-        <h2>Cloned Repositories</h2>
-        <ul>
-        <?php foreach ($cloned_repositories as $repo_name): ?>
-            <li>
-                <?php echo esc_html($repo_name); ?>
-                <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
-                <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
-            </li>
-        <?php endforeach; ?>
-        </ul>
-        <?php endif; ?>
-    </div><!-- tab-content -->
+    <?php if (!empty($cloned_repositories)): ?>
+    <h2>Cloned Repositories</h2>
+    <ul>
+    <?php foreach ($cloned_repositories as $repo_name): ?>
+        <?php 
+        // Get the current branch
+        $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme');
+        $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
+        $current_branch = shell_exec("cd {$repo_path} && git branch --show-current");
+        $branches = shell_exec("cd {$repo_path} && git branch -r");
+        $branch_list = array_filter(array_map('trim', explode("\n", $branches)));
+        ?>
+        <li>
+            <strong><?php echo esc_html($repo_name); ?></strong> 
+            <br> Current Branch: <span class="current-branch"><?php echo esc_html($current_branch); ?></span>
+            <br> Switch Branch:
+            <select class="branch-dropdown" data-repo-name="<?php echo esc_attr($repo_name); ?>">
+                <?php foreach ($branch_list as $branch): ?>
+                <option value="<?php echo esc_attr($branch); ?>"><?php echo esc_html($branch); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button class="switch-branch" data-repo-name="<?php echo esc_attr($repo_name); ?>">Switch</button>
+            <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
+            <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
+        </li>
+    <?php endforeach; ?>
+    </ul>
+    <?php endif; ?>
+</div><!-- tab-content -->
 </div> <!-- wrap -->
 
 

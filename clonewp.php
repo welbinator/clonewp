@@ -79,25 +79,96 @@ function wp_github_clone_pull() {
     // Determine the path based on the repository type
     $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
 
-    if (is_dir($repo_path)) {
-        // Execute git pull for the repository
-        chdir($repo_path);
-        $output = shell_exec('git pull');
+    if (!is_dir($repo_path)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Failed to pull changes. Directory does not exist."
+        ));
+        return;
+    }
+
+    // Check if the repository is on a branch
+    $current_branch = trim(shell_exec("cd {$repo_path} && git branch --show-current"));
+    if (empty($current_branch)) {
+        wp_send_json(array(
+            'success' => false,
+            'message' => "Cannot pull changes. Repository is in a detached HEAD state.",
+        ));
+        return;
+    }
+
+    // Execute git pull for the current branch
+    $output = shell_exec("cd {$repo_path} && git pull origin {$current_branch} 2>&1");
+
+    // Check for success or failure
+    if (strpos($output, 'Already up to date.') !== false || strpos($output, 'Fast-forward') !== false) {
         wp_send_json(array(
             'success' => true,
-            'message' => "Successfully pulled {$repo_name} from {$repo_type}s", // 'themes' or 'plugins'
+            'message' => "Successfully pulled {$repo_name} from branch {$current_branch}.",
             'details' => $output
         ));
     } else {
         wp_send_json(array(
             'success' => false,
-            'message' => "Failed to pull {$repo_name}. Directory not found in {$repo_type}s." // 'themes' or 'plugins'
+            'message' => "Failed to pull changes from {$repo_name}.",
+            'details' => $output
         ));
     }
 }
 
+
+
 add_action('wp_ajax_wp_github_clone_pull', 'wp_github_clone_pull');
 
+function wp_github_clone_switch_branch_ajax_handler() {
+    check_ajax_referer('wp_github_clone_nonce', 'nonce');
+
+    $repo_name = sanitize_text_field($_POST['repo']);
+    $branch_name = sanitize_text_field($_POST['branch']);
+
+    if (empty($repo_name) || empty($branch_name)) {
+        wp_send_json_error(['message' => 'Missing repository name or branch.']);
+        return;
+    }
+
+    $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme');
+    $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
+
+    if (!is_dir($repo_path)) {
+        wp_send_json_error(['message' => 'Repository directory not found.']);
+        return;
+    }
+
+    // Check if the branch is remote (starts with 'origin/')
+    $is_remote_branch = strpos($branch_name, 'origin/') === 0;
+    $local_branch_name = $is_remote_branch ? substr($branch_name, 7) : $branch_name; // Remove 'origin/' prefix for local branch
+
+    // Switch to the branch
+    if ($is_remote_branch) {
+        // Create and track a local branch for the remote branch
+        $output = shell_exec("cd {$repo_path} && git checkout -b " . escapeshellarg($local_branch_name) . " --track " . escapeshellarg($branch_name) . " 2>&1");
+    } else {
+        // Switch to the local branch
+        $output = shell_exec("cd {$repo_path} && git checkout " . escapeshellarg($branch_name) . " 2>&1");
+    }
+
+    // Check for success or failure
+    if (strpos($output, 'Switched to branch') !== false || strpos($output, 'Already on') !== false || strpos($output, 'Branch') !== false) {
+        wp_send_json_success([
+            'message' => "Switched to branch {$local_branch_name}.",
+            'details' => $output
+        ]);
+    } else {
+        wp_send_json_error([
+            'message' => "Failed to switch branch.",
+            'details' => $output
+        ]);
+    }
+}
+
+
+
+add_action('wp_ajax_wp_github_clone_switch_branch', 'wp_github_clone_switch_branch_ajax_handler');
 
 
 function wp_github_clone_admin_notices() {
