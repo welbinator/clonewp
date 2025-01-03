@@ -24,7 +24,7 @@ jobs:
         run: |
           cp clonewp.php temp_dir/
           cp -r includes temp_dir/includes
-          cp -r includes temp_dir/admin
+          cp -r admin temp_dir/admin
           
 
       # Rename directory to the desired folder name
