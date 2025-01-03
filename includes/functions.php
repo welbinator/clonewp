@@ -216,9 +216,7 @@ function wp_github_clone_ajax_handler() {
     $type = isset($_POST['clone_type']) ? sanitize_text_field($_POST['clone_type']) : 'theme';
     $repo_access_type = isset($_POST['repo_visibility']) ? sanitize_text_field($_POST['repo_visibility']) : 'public';
     
-    error_log('type is ' . $type);
-    error_log('repo_access_type is ' . $repo_access_type);
-    
+      
     // Determine the correct destination directory based on the type
     $destination_dir = $type === 'plugin' ? WP_CONTENT_DIR . '/plugins/' : WP_CONTENT_DIR . '/themes/';
     

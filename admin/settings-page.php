@@ -81,7 +81,7 @@
         $repo_type = get_option("wp_github_clone_type_{$repo_name}", 'theme');
         $repo_path = ($repo_type === 'plugin') ? WP_CONTENT_DIR . '/plugins/' . $repo_name : WP_CONTENT_DIR . '/themes/' . $repo_name;
         $current_branch = shell_exec("cd {$repo_path} && git branch --show-current");
-        $branches = shell_exec("cd {$repo_path} && git branch -r");
+        $branches = shell_exec("cd {$repo_path} && git branch");
         $branch_list = array_filter(array_map('trim', explode("\n", $branches)));
         ?>
         <li>
@@ -94,6 +94,7 @@
                 <?php endforeach; ?>
             </select>
             <button class="switch-branch" data-repo-name="<?php echo esc_attr($repo_name); ?>">Switch</button>
+            <button class="fetch-all" data-repo-name="<?php echo esc_attr($repo_name); ?>">Fetch All</button>
             <button class="pull-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Pull</button>
             <button class="delete-repo" data-repo-name="<?php echo esc_attr($repo_name); ?>">Delete</button>
         </li>
