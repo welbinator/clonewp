@@ -3,7 +3,7 @@
 Plugin Name: CloneWP
 Plugin URI: https://yourwebsite.com/plugin
 Description: A plugin to clone and display GitHub repositories.
-Version: 1.1.2
+Version: 1.1.3
 Author: Your Name
 Author URI: https://yourwebsite.com/
 License: GPL2
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define( 'CLONEWP_VERSION', '1.1.2' );
+define( 'CLONEWP_VERSION', '1.1.3' );
 define( 'CLONEWP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CLONEWP_URL', plugin_dir_url( __FILE__ ) );
 define( 'CLONEWP_MIN_WP_VERSION', '5.8' );
