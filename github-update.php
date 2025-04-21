@@ -1,6 +1,6 @@
 <?php 
 
-namespace GitHubReleaseDownload\GitHubUpdater;
+namespace CloneWP\GitHubUpdater;
 
 function my_plugin_check_for_updates($transient) {
     // error_log("check for updates called");
