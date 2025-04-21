@@ -15,6 +15,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Define plugin constants
+define( 'CLONEWP_VERSION', '1.1.0' );
+define( 'CLONEWP_PATH', plugin_dir_path( __FILE__ ) );
+define( 'CLONEWP_URL', plugin_dir_url( __FILE__ ) );
+define( 'CLONEWP_MIN_WP_VERSION', '5.8' );
+define( 'CLONEWP_MIN_PHP_VERSION', '7.4' );
+
+if ( file_exists( CLONEWP_PATH . 'github-update.php' ) ) {
+	include_once CLONEWP_PATH . 'github-update.php';
+}
+
 require_once plugin_dir_path(__FILE__) . 'includes/class-clonewp.php';
 require_once plugin_dir_path(__FILE__) . 'includes/functions.php';
 require_once plugin_dir_path(__FILE__) . 'includes/helpers.php';
