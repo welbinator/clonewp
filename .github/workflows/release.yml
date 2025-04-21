@@ -23,6 +23,7 @@ jobs:
       - name: Copy necessary files to the temporary directory
         run: |
           cp clonewp.php temp_dir/
+          cp github-update.php temp_dir/
           cp -r includes temp_dir/includes
           cp -r admin temp_dir/admin
           
